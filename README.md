@@ -4,6 +4,14 @@ Zähle die Tage bis zum Urlaub – eine Home-Assistant-Integration, die für jed
 geplanten Urlaub einen eigenen Countdown-Sensor erzeugt, inklusive Blueprint zum
 Anlegen neuer Urlaube und für Push-Benachrichtigungen zu festen Vorlaufzeiten.
 
+<p align="center">
+  <img src="docs/bilder/06-karte-hell.png" width="49%" alt="Urlaubszähler-Karte im hellen Design">
+  <img src="docs/bilder/07-karte-dunkel.png" width="49%" alt="Urlaubszähler-Karte im dunklen Design">
+</p>
+
+*Alle Bilder in dieser Anleitung sind echte Aufnahmen aus einer laufenden
+Home-Assistant-Instanz (2026.2) mit dieser Integration.*
+
 * Einrichtung komplett über die UI (Config Flow) – **keine Helfer von Hand anlegen**.
   `input_datetime`, `input_text` & Co. sind nicht nötig; die Integration verwaltet
   alle Daten intern in ihrem eigenen Speicher (`.storage/urlaubszaehler.<entry_id>`).
@@ -67,8 +75,16 @@ als Kategorie *Integration* hinzufügen → installieren.
 5. **Schritt 3:** Familiennamen eintragen und optional festlegen, welche
    Personen zu einer Familie gehören.
 
+| Schritt 1 | Schritt 2 | Schritt 3 |
+|---|---|---|
+| ![Anzahl](docs/bilder/01-einrichtung-anzahl.png) | ![Personen](docs/bilder/02-einrichtung-personen.png) | ![Familien](docs/bilder/03-einrichtung-familien.png) |
+
+Danach hängen alle Entitäten an einem gemeinsamen Gerät:
+
+![Geräteseite](docs/bilder/08-geraeteseite.png)
+
 Danach existiert je Person und Familie eine Entität, z. B.
-`binary_sensor.urlaubszaehler_papa` – diese Namen tauchen im Blueprint zur
+`binary_sensor.urlaubszahler_papa` – diese Namen tauchen im Blueprint zur
 Auswahl auf.
 
 > Namen später ändern: **Einstellungen → Geräte & Dienste → Urlaubszähler →
@@ -96,6 +112,8 @@ Taucht *„Urlaubszähler – Urlaub anlegen & erinnern"* nicht sofort auf, einm
 | **Vorlaufzeiten** | Standard: 60, 40, 20, 10, 5 und 1 Tag vorher |
 | **Uhrzeit der Erinnerung** | Standard: 09:00 Uhr |
 
+![Blueprint-Formular](docs/bilder/04-blueprint.png)
+
 Beim **Speichern** der Automatisierung wird der Sensor sofort erzeugt. Für jeden
 weiteren Urlaub legst du einfach eine weitere Automatisierung aus demselben
 Blueprint an.
@@ -104,7 +122,7 @@ Blueprint an.
 
 ## 4. Der Sensor
 
-Pro Urlaub entsteht eine Entität wie `sensor.urlaubszaehler_urlaub_papa_gardasee`.
+Pro Urlaub entsteht eine Entität wie `sensor.urlaubszahler_urlaub_papa_und_fiene_gardasee`.
 
 **Status:** der Reisebeginn als **Unix-Zeit (Dezimal, Sekunden)**. Die Uhrzeit
 wird in der in Home Assistant eingestellten Zeitzone (z. B. `Europe/Berlin`)
@@ -166,6 +184,8 @@ show_map: true
 map_height: 260
 ```
 
+![Dashboard mit der Karte](docs/bilder/05-dashboard-hell.png)
+
 Ein Klick auf eine Zeile öffnet die Detailansicht des jeweiligen Sensors.
 Reiseziele ohne Koordinaten erscheinen in der Liste mit dem Hinweis
 „Ort nicht gefunden", aber nicht auf der Karte.
@@ -211,8 +231,8 @@ python3 tools/build_card.py
 action: urlaubszaehler.add_vacation
 data:
   teilnehmer:
-    - binary_sensor.urlaubszaehler_papa
-    - binary_sensor.urlaubszaehler_fiene
+    - binary_sensor.urlaubszahler_papa
+    - binary_sensor.urlaubszahler_fiene
   ziel: Gardasee
   start: "2026-08-14 07:30:00"
   urlaub_id: sommerurlaub_2026
@@ -220,7 +240,26 @@ data:
 
 ---
 
-## 7. Gut zu wissen
+## 7. Tests
+
+Die Integration wird gegen ein echtes Home Assistant getestet
+(`pytest-homeassistant-custom-component`):
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install homeassistant pytest-homeassistant-custom-component
+.venv/bin/python -m pytest
+```
+
+Abgedeckt sind unter anderem der vollständige Einrichtungsdialog, die drei
+Services, das Auflösen von Teilnehmern, das Zwischenspeichern der Koordinaten,
+der Countdown-Stopp bei 0, das Löschen exakt 24 Stunden nach der Abreise
+(inklusive Zeitumstellung), der Neustart – und der Blueprint selbst: er wird
+von Home Assistant geladen, zu einer echten Automatisierung gemacht und für
+jede der sechs Vorlaufzeiten geprüft.
+
+---
+
+## 8. Gut zu wissen
 
 * **Auto-Delete:** Ein Hintergrundtask prüft minütlich; der Sensor verschwindet
   in der Minute, in der `Reisezeitpunkt + 24 h` überschritten wird.

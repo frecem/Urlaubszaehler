@@ -87,13 +87,20 @@ class Vacation:
 
     @property
     def delete_at(self) -> datetime:
-        """Zeitpunkt, zu dem der Sensor restlos entfernt wird."""
-        return self.start + AUTO_DELETE_AFTER
+        """Zeitpunkt, zu dem der Sensor restlos entfernt wird.
+
+        Bewusst über UTC gerechnet: eine Addition auf der lokalen Zeit würde an
+        der Zeitumstellung 23 oder 25 echte Stunden ergeben statt der
+        geforderten 24.
+        """
+        return dt_util.as_local(
+            self.start.astimezone(dt_util.UTC) + AUTO_DELETE_AFTER
+        )
 
     @property
     def delete_ts(self) -> float:
         """Löschzeitpunkt als Unix-Zeit."""
-        return self.delete_at.timestamp()
+        return self.start_ts + AUTO_DELETE_AFTER.total_seconds()
 
     def restzeit(self, jetzt: datetime | None = None) -> Restzeit:
         """Verbleibende Zeit bis zum Reisebeginn."""

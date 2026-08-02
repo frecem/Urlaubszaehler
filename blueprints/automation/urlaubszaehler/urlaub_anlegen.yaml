@@ -42,6 +42,11 @@ blueprint:
             interpretiert.
           selector:
             datetime:
+    zielort:
+      name: Zielort auf der Karte (optional)
+      icon: mdi:map-marker
+      collapsed: true
+      input:
         ziel_manuell:
           name: Zielort selbst auf der Karte setzen
           description: >-
@@ -145,9 +150,11 @@ trigger:
   - platform: event
     event_type: automation_reloaded
     id: anlegen
-  # … und nach jedem Neustart wiederherstellen.
-  - platform: homeassistant
-    event: start
+  # … und nach jedem Neustart wiederherstellen. Bewusst 'homeassistant_started'
+  # statt des Start-Triggers: Letzterer feuert bereits während des Hochfahrens,
+  # wenn es den Service des Urlaubszählers unter Umständen noch nicht gibt.
+  - platform: event
+    event_type: homeassistant_started
     id: anlegen
   - platform: time
     at: !input erinnerungszeit

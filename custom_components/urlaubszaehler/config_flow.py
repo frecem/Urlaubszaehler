@@ -14,6 +14,9 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -32,14 +35,20 @@ from .const import (
 
 TITEL = "Urlaubszähler"
 
+
+def _anzahl_selector(minimum: int, maximum: int) -> NumberSelector:
+    """Zahlenfeld mit sichtbarem Wert (ein Schieberegler zeigt keinen an)."""
+    return NumberSelector(
+        NumberSelectorConfig(
+            min=minimum, max=maximum, step=1, mode=NumberSelectorMode.BOX
+        )
+    )
+
+
 COUNT_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_PERSON_COUNT, default=2): vol.All(
-            vol.Coerce(int), vol.Range(min=1, max=20)
-        ),
-        vol.Required(CONF_FAMILY_COUNT, default=1): vol.All(
-            vol.Coerce(int), vol.Range(min=0, max=10)
-        ),
+        vol.Required(CONF_PERSON_COUNT, default=2): _anzahl_selector(1, 20),
+        vol.Required(CONF_FAMILY_COUNT, default=1): _anzahl_selector(0, 10),
     }
 )
 
@@ -129,8 +138,8 @@ class UrlaubszaehlerConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(step_id="user", data_schema=COUNT_SCHEMA)
 
-        self._person_count = user_input[CONF_PERSON_COUNT]
-        self._family_count = user_input[CONF_FAMILY_COUNT]
+        self._person_count = int(user_input[CONF_PERSON_COUNT])
+        self._family_count = int(user_input[CONF_FAMILY_COUNT])
         return await self.async_step_personen()
 
     async def async_step_personen(
@@ -217,17 +226,17 @@ class UrlaubszaehlerOptionsFlow(OptionsFlow):
                     vol.Required(
                         CONF_PERSON_COUNT,
                         default=len(aktuell.get(CONF_PERSONEN, [])) or 1,
-                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=20)),
+                    ): _anzahl_selector(1, 20),
                     vol.Required(
                         CONF_FAMILY_COUNT,
                         default=len(aktuell.get(CONF_FAMILIEN, [])),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=10)),
+                    ): _anzahl_selector(0, 10),
                 }
             )
             return self.async_show_form(step_id="namen", data_schema=schema)
 
-        self._person_count = user_input[CONF_PERSON_COUNT]
-        self._family_count = user_input[CONF_FAMILY_COUNT]
+        self._person_count = int(user_input[CONF_PERSON_COUNT])
+        self._family_count = int(user_input[CONF_FAMILY_COUNT])
         return await self.async_step_namen_personen()
 
     async def async_step_namen_personen(

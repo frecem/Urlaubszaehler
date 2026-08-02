@@ -10,8 +10,9 @@ from typing import Any
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
@@ -20,6 +21,8 @@ from .const import (
     CONF_MITGLIEDER,
     CONF_NAME,
     DOMAIN,
+    SIGNAL_VACATION_ADDED,
+    SIGNAL_VACATION_REMOVED,
     UID_PARTICIPANT,
     UPDATE_INTERVAL,
 )
@@ -67,6 +70,26 @@ class TeilnehmerSensor(BinarySensorEntity):
             manufacturer="Urlaubszähler",
             model="Urlaubs-Countdown",
         )
+
+    async def async_added_to_hass(self) -> None:
+        """Auf neue und entfernte Urlaube sofort reagieren.
+
+        Ohne das würde die Entität erst beim nächsten Abfrageintervall
+        umschalten - für Automationen und die Blueprint-Auswahl zu spät.
+        """
+        entry_id = self._manager.entry.entry_id
+        for signal in (
+            SIGNAL_VACATION_ADDED.format(entry_id),
+            SIGNAL_VACATION_REMOVED.format(entry_id),
+        ):
+            self.async_on_remove(
+                async_dispatcher_connect(self.hass, signal, self._aktualisieren)
+            )
+
+    @callback
+    def _aktualisieren(self, _daten: Any) -> None:
+        """Zustand nach einer Änderung an den Urlauben neu schreiben."""
+        self.async_write_ha_state()
 
     @property
     def is_on(self) -> bool:

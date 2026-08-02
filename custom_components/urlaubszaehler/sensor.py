@@ -6,7 +6,9 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -46,8 +48,17 @@ async def async_setup_entry(
     @callback
     def _urlaub_entfernt(urlaub_id: str) -> None:
         sensor = bekannte.pop(urlaub_id, None)
-        if sensor is not None:
-            # force_remove entfernt die Entität auch aus der Entitäten-Registry.
+        if sensor is None:
+            return
+        # Der Eintrag muss aus der Entitäten-Registry verschwinden, sonst
+        # bliebe die Entität als "nicht verfügbar" zurück.
+        registry = er.async_get(hass)
+        entity_id = registry.async_get_entity_id(
+            Platform.SENSOR, DOMAIN, sensor.unique_id
+        )
+        if entity_id:
+            registry.async_remove(entity_id)
+        else:
             hass.async_create_task(sensor.async_remove(force_remove=True))
 
     entry.async_on_unload(

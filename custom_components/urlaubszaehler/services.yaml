@@ -10,7 +10,7 @@ add_vacation:
         Personen und/oder Familien, die in den Urlaub fahren. Entweder die
         Entitäten des Urlaubszählers oder einfache Namen als Text.
       required: true
-      example: '["binary_sensor.urlaubszaehler_papa", "binary_sensor.urlaubszaehler_fiene"]'
+      example: '["binary_sensor.urlaubszahler_papa", "binary_sensor.urlaubszahler_fiene"]'
       selector:
         entity:
           multiple: true
