@@ -64,6 +64,10 @@ class Vacation:
     start: datetime
     arten: list[str] = field(default_factory=list)
     mitglieder: list[str] = field(default_factory=list)
+    breitengrad: float | None = None
+    laengengrad: float | None = None
+    koordinaten_quelle: str | None = None
+    gefunden_als: str | None = None
 
     def __post_init__(self) -> None:
         self.start = to_local(self.start)
@@ -113,6 +117,11 @@ class Vacation:
     # ------------------------------------------------------------------
     # Serialisierung
     # ------------------------------------------------------------------
+    @property
+    def hat_koordinaten(self) -> bool:
+        """True, wenn das Ziel auf der Karte dargestellt werden kann."""
+        return self.breitengrad is not None and self.laengengrad is not None
+
     def as_dict(self) -> dict[str, Any]:
         """Für den persistenten Speicher."""
         return {
@@ -122,6 +131,10 @@ class Vacation:
             "start": self.start.isoformat(),
             "arten": self.arten,
             "mitglieder": self.mitglieder,
+            "breitengrad": self.breitengrad,
+            "laengengrad": self.laengengrad,
+            "koordinaten_quelle": self.koordinaten_quelle,
+            "gefunden_als": self.gefunden_als,
         }
 
     @classmethod
@@ -137,4 +150,8 @@ class Vacation:
             start=start,
             arten=list(daten.get("arten", [])),
             mitglieder=list(daten.get("mitglieder", [])),
+            breitengrad=daten.get("breitengrad"),
+            laengengrad=daten.get("laengengrad"),
+            koordinaten_quelle=daten.get("koordinaten_quelle"),
+            gefunden_als=daten.get("gefunden_als"),
         )

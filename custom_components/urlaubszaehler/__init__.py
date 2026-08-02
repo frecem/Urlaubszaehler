@@ -25,6 +25,7 @@ from .const import (
     ATTR_TEILNEHMER,
     ATTR_URLAUB_ID,
     ATTR_ZIEL,
+    ATTR_KOORDINATEN,
     CONF_MITGLIEDER,
     CONF_NAME,
     DOMAIN,
@@ -49,6 +50,15 @@ ADD_VACATION_SCHEMA = vol.Schema(
         vol.Required(ATTR_START): cv.datetime,
         vol.Optional(ATTR_URLAUB_ID): cv.string,
         vol.Optional(ATTR_ENTRY_ID): cv.string,
+        # Manuell gesetzte Zielkoordinaten (z. B. aus dem Karten-Feld des
+        # Blueprints). Haben Vorrang vor der automatischen Suche.
+        vol.Optional(ATTR_KOORDINATEN): vol.Schema(
+            {
+                vol.Required("latitude"): vol.Coerce(float),
+                vol.Required("longitude"): vol.Coerce(float),
+            },
+            extra=vol.REMOVE_EXTRA,
+        ),
     }
 )
 
@@ -212,6 +222,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             raise ServiceValidationError(
                 "Es wurde niemand ausgewählt, der in den Urlaub fährt."
             )
+        koordinaten = call.data.get(ATTR_KOORDINATEN) or {}
         urlaub = await manager.async_add_vacation(
             namen=namen,
             ziel=call.data[ATTR_ZIEL],
@@ -219,6 +230,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
             urlaub_id=call.data.get(ATTR_URLAUB_ID),
             arten=arten,
             mitglieder=mitglieder,
+            breitengrad=koordinaten.get("latitude"),
+            laengengrad=koordinaten.get("longitude"),
         )
         return {
             ATTR_URLAUB_ID: urlaub.urlaub_id,
@@ -226,6 +239,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
             "ziel": urlaub.ziel,
             "start": urlaub.start.isoformat(),
             "start_zeitstempel": urlaub.start_ts,
+            "breitengrad": urlaub.breitengrad,
+            "laengengrad": urlaub.laengengrad,
+            "koordinaten_quelle": urlaub.koordinaten_quelle,
             "nachricht": urlaub.nachricht(),
         }
 

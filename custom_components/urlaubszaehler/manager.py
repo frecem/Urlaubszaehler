@@ -24,6 +24,7 @@ from .const import (
     SIGNAL_VACATION_REMOVED,
     STORAGE_VERSION,
 )
+from .geocoding import async_geocode
 from .models import Vacation
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,6 +45,9 @@ class UrlaubszaehlerManager:
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
         )
         self.vacations: dict[str, Vacation] = {}
+        # Bereits nachgeschlagene Reiseziele, damit Nominatim nur einmal pro
+        # Ort gefragt wird.
+        self.geocache: dict[str, dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
     # Teilnehmer
@@ -105,6 +109,7 @@ class UrlaubszaehlerManager:
         daten = await self._store.async_load()
         if not daten:
             return
+        self.geocache = dict(daten.get("geocache", {}))
         for eintrag in daten.get("vacations", []):
             try:
                 urlaub = Vacation.from_dict(eintrag)
@@ -116,7 +121,10 @@ class UrlaubszaehlerManager:
     async def async_save(self) -> None:
         """Urlaube speichern."""
         await self._store.async_save(
-            {"vacations": [urlaub.as_dict() for urlaub in self.vacations.values()]}
+            {
+                "vacations": [urlaub.as_dict() for urlaub in self.vacations.values()],
+                "geocache": self.geocache,
+            }
         )
 
     async def async_remove_storage(self) -> None:
@@ -131,6 +139,38 @@ class UrlaubszaehlerManager:
         roh = f"{'_'.join(namen)}_{ziel}_{start.strftime('%Y%m%d%H%M')}"
         return slugify(roh) or f"urlaub_{int(start.timestamp())}"
 
+    async def async_koordinaten(
+        self, ziel: str, breitengrad: float | None, laengengrad: float | None
+    ) -> dict[str, Any]:
+        """Koordinaten des Reiseziels bestimmen.
+
+        Manuell gesetzte Koordinaten haben Vorrang. Sonst wird der Ortsname
+        einmalig nachgeschlagen und das Ergebnis zwischengespeichert.
+        """
+        if breitengrad is not None and laengengrad is not None:
+            return {
+                "breitengrad": float(breitengrad),
+                "laengengrad": float(laengengrad),
+                "koordinaten_quelle": "manuell",
+                "gefunden_als": None,
+            }
+
+        schluessel = slugify(ziel)
+        if schluessel in self.geocache:
+            return {**self.geocache[schluessel], "koordinaten_quelle": "geocoding"}
+
+        treffer = await async_geocode(self.hass, ziel)
+        if treffer is None:
+            return {
+                "breitengrad": None,
+                "laengengrad": None,
+                "koordinaten_quelle": None,
+                "gefunden_als": None,
+            }
+
+        self.geocache[schluessel] = treffer
+        return {**treffer, "koordinaten_quelle": "geocoding"}
+
     async def async_add_vacation(
         self,
         namen: list[str],
@@ -139,8 +179,11 @@ class UrlaubszaehlerManager:
         urlaub_id: str | None = None,
         arten: list[str] | None = None,
         mitglieder: list[str] | None = None,
+        breitengrad: float | None = None,
+        laengengrad: float | None = None,
     ) -> Vacation:
         """Urlaub anlegen oder - bei gleicher ID - aktualisieren."""
+        ort = await self.async_koordinaten(ziel, breitengrad, laengengrad)
         urlaub = Vacation(
             urlaub_id=urlaub_id or self.build_id(namen, ziel, start),
             namen=namen,
@@ -148,6 +191,7 @@ class UrlaubszaehlerManager:
             start=start,
             arten=arten or [],
             mitglieder=mitglieder or [],
+            **ort,
         )
         self.vacations[urlaub.urlaub_id] = urlaub
         await self.async_save()

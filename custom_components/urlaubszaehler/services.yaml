@@ -33,6 +33,14 @@ add_vacation:
       example: "2026-08-14 07:30:00"
       selector:
         datetime:
+    koordinaten:
+      name: Zielkoordinaten
+      description: >-
+        Optional. Ohne diese Angabe wird der Ortsname automatisch bei
+        OpenStreetMap nachgeschlagen. Nützlich bei mehrdeutigen Ortsnamen.
+      required: false
+      selector:
+        location:
     urlaub_id:
       name: Urlaub-ID
       description: >-

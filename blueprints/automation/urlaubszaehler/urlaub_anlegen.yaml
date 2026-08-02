@@ -42,6 +42,24 @@ blueprint:
             interpretiert.
           selector:
             datetime:
+        ziel_manuell:
+          name: Zielort selbst auf der Karte setzen
+          description: >-
+            Normalerweise wird der Ortsname automatisch bei OpenStreetMap
+            nachgeschlagen. Nur einschalten, wenn der Ort mehrdeutig ist oder
+            nicht gefunden wird.
+          default: false
+          selector:
+            boolean:
+        ziel_koordinaten:
+          name: Zielkoordinaten
+          description: >-
+            Wird nur verwendet, wenn die Option darüber eingeschaltet ist.
+          default:
+            latitude: 0
+            longitude: 0
+          selector:
+            location:
 
     benachrichtigung:
       name: Benachrichtigungen
@@ -104,6 +122,8 @@ variables:
   start: !input start
   vorlaufzeiten: !input vorlaufzeiten
   mobilgeraete: !input mobilgeraete
+  ziel_manuell: !input ziel_manuell
+  ziel_koordinaten: !input ziel_koordinaten
   urlaub_id: "{{ this.entity_id | replace('automation.', '') }}"
   namen: >-
     {{ teilnehmer | map('state_attr', 'anzeigename') | reject('none') | list }}
@@ -140,6 +160,24 @@ action:
       # ----------------------------------------------------------------
       # Urlaub im Urlaubszähler anlegen bzw. aktualisieren
       # ----------------------------------------------------------------
+      # Variante mit selbst gesetzten Zielkoordinaten
+      - conditions:
+          - condition: trigger
+            id: anlegen
+          - condition: template
+            value_template: "{{ tage_bis | int(-999) >= 0 }}"
+          - condition: template
+            value_template: "{{ ziel_manuell }}"
+        sequence:
+          - service: urlaubszaehler.add_vacation
+            data:
+              teilnehmer: "{{ teilnehmer }}"
+              ziel: "{{ ziel }}"
+              start: "{{ start }}"
+              urlaub_id: "{{ urlaub_id }}"
+              koordinaten: "{{ ziel_koordinaten }}"
+
+      # Variante mit automatischer Ortssuche
       - conditions:
           - condition: trigger
             id: anlegen

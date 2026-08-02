@@ -39,10 +39,12 @@ config/
 │       └── translations/
 │           ├── de.json
 │           └── en.json
-└── blueprints/
-    └── automation/
-        └── urlaubszaehler/
-            └── urlaub_anlegen.yaml
+├── blueprints/
+│   └── automation/
+│       └── urlaubszaehler/
+│           └── urlaub_anlegen.yaml
+└── www/
+    └── urlaubszaehler-card.js   ← die eigene Lovelace-Karte
 ```
 
 Die Datei `lovelace/urlaubszaehler_karte.yaml` wird **nicht** kopiert – daraus
@@ -123,13 +125,81 @@ in jeder Lovelace-Karte.
 | `gestartet` | `true`, sobald der Reisezeitpunkt erreicht ist |
 | `wird_geloescht_am` | `2026-08-15T07:30:00+02:00` |
 | `zeitzone` | `Europe/Berlin` |
-
-Fertige Karten für das Dashboard: siehe
-[`lovelace/urlaubszaehler_karte.yaml`](lovelace/urlaubszaehler_karte.yaml).
+| `breitengrad` / `laengengrad` | `45.65` / `10.65` (für die Karte, sonst `null`) |
+| `koordinaten_quelle` | `geocoding`, `manuell` oder `null` |
+| `gefunden_als` | `Lago di Garda, Italia` |
 
 ---
 
-## 5. Services
+## 5. Die Urlaubszähler-Karte fürs Dashboard
+
+Eine eigene Lovelace-Karte liegt unter `www/urlaubszaehler-card.js` bei. Sie
+zeigt alle geplanten Urlaube als kompakte Liste und darüber eine Weltkarte:
+vom Standort des Home-Assistant-Servers führt zu jedem Reiseziel ein
+gestrichelter Bogen. Der Kartenausschnitt richtet sich automatisch nach
+Zuhause und allen Zielen; mehrere Reisen zum selben Ort laufen nebeneinander
+statt übereinander.
+
+**Einrichten:**
+
+1. `www/urlaubszaehler-card.js` nach `config/www/` kopieren.
+2. **Einstellungen → Dashboards → ⋮ → Ressourcen → Ressource hinzufügen**
+   * URL: `/local/urlaubszaehler-card.js`
+   * Typ: **JavaScript-Modul**
+3. Browser einmal hart neu laden (Strg+F5).
+4. Dashboard bearbeiten → **Karte hinzufügen** → „Urlaubszähler".
+
+**Optionen** (auch im grafischen Editor der Karte einstellbar):
+
+| Option | Standard | Bedeutung |
+|---|---|---|
+| `title` | `Urlaubszähler` | Überschrift, leer lassen blendet sie aus |
+| `show_map` | `true` | Weltkarte anzeigen |
+| `map_height` | `260` | Höhe der Karte in Pixeln |
+| `max` | `0` | Höchstzahl angezeigter Urlaube (`0` = alle) |
+| `entities` | – | Feste Sensor-Auswahl statt automatischer Erkennung |
+
+```yaml
+type: custom:urlaubszaehler-card
+title: 🏖️ Urlaubszähler
+show_map: true
+map_height: 260
+```
+
+Ein Klick auf eine Zeile öffnet die Detailansicht des jeweiligen Sensors.
+Reiseziele ohne Koordinaten erscheinen in der Liste mit dem Hinweis
+„Ort nicht gefunden", aber nicht auf der Karte.
+
+Wer nichts installieren möchte, findet in
+[`lovelace/urlaubszaehler_karte.yaml`](lovelace/urlaubszaehler_karte.yaml)
+zusätzlich reine Bordmittel-Karten (Markdown).
+
+### Woher kommen die Koordinaten?
+
+Beim Anlegen eines Urlaubs schlägt die Integration den Ortsnamen einmalig bei
+**OpenStreetMap/Nominatim** nach und speichert das Ergebnis. Jeder Ort wird nur
+einmal abgefragt; weitere Reisen zum selben Ziel nutzen den Zwischenspeicher.
+Ist ein Ortsname mehrdeutig oder unbekannt, lässt sich im Blueprint
+*„Zielort selbst auf der Karte setzen"* einschalten und der Punkt von Hand
+setzen – manuelle Koordinaten haben immer Vorrang.
+
+Ohne Internetverbindung schlägt nur die Ortssuche fehl; der Urlaub wird
+trotzdem angelegt und der Countdown läuft normal.
+
+### Karte neu bauen
+
+Die Länderumrisse stammen von [Natural Earth](https://www.naturalearthdata.com/)
+(gemeinfrei) und stecken vereinfacht und delta-kodiert (~35 KB) direkt in der
+Karte – es werden keine Kartenkacheln von fremden Servern nachgeladen. Nach
+Änderungen an `tools/urlaubszaehler-card.src.js`:
+
+```bash
+python3 tools/build_card.py
+```
+
+---
+
+## 6. Services
 
 | Service | Zweck |
 |---|---|
@@ -150,7 +220,7 @@ data:
 
 ---
 
-## 6. Gut zu wissen
+## 7. Gut zu wissen
 
 * **Auto-Delete:** Ein Hintergrundtask prüft minütlich; der Sensor verschwindet
   in der Minute, in der `Reisezeitpunkt + 24 h` überschritten wird.

@@ -42,6 +42,7 @@ ATTR_ZIEL: Final = "ziel"
 ATTR_START: Final = "start"
 ATTR_URLAUB_ID: Final = "urlaub_id"
 ATTR_ENTRY_ID: Final = "entry_id"
+ATTR_KOORDINATEN: Final = "koordinaten"
 
 # Der Sensor verschwindet exakt 24 Stunden nach dem Reisezeitpunkt.
 AUTO_DELETE_AFTER: Final = timedelta(hours=24)

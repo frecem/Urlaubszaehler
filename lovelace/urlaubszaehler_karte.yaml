@@ -2,14 +2,41 @@
 # ---------------------------------------------------------------------------
 # Einfügen über: Dashboard → Bearbeiten → Karte hinzufügen → "Manuell"
 # und dort den Inhalt einer Karte ab "type:" einfügen (ohne den Listenstrich).
-#
+
+# ===========================================================================
+# EMPFOHLEN: die eigene Karte (www/urlaubszaehler-card.js)
+# ---------------------------------------------------------------------------
+# Zeigt automatisch alle geplanten Urlaube und darüber eine Weltkarte mit
+# gestrichelten Reisebögen vom Standort des Servers zu den Zielen.
+# Voraussetzung: Die Datei liegt unter config/www/ und ist unter
+# Einstellungen → Dashboards → Ressourcen als JavaScript-Modul eingetragen
+# (/local/urlaubszaehler-card.js). Danach steht sie auch in der
+# Kartenauswahl unter "Urlaubszähler".
+# ===========================================================================
+
+- type: custom:urlaubszaehler-card
+  title: 🏖️ Urlaubszähler
+  show_map: true
+  map_height: 260
+  # max: 5                       # optional: nur die nächsten 5 Urlaube
+  # entities:                    # optional: feste Auswahl statt Automatik
+  #   - sensor.urlaubszaehler_urlaub_papa_gardasee
+
+# Nur die Liste, ohne Karte
+- type: custom:urlaubszaehler-card
+  title: Nächste Reisen
+  show_map: false
+  max: 3
+
+# ===========================================================================
+# ALTERNATIVE OHNE INSTALLATION: reine Bordmittel-Karten
+# ---------------------------------------------------------------------------
 # Der Sensor-Status ist der Reisebeginn als Unix-Zeit (Dezimal). Tage, Stunden
 # und Minuten werden hier live daraus abgeleitet – die Anzeige bleibt bei
 # 0/0/0 stehen, sobald der Reisezeitpunkt erreicht ist.
+# ===========================================================================
 
-# ---------------------------------------------------------------------------
-# 1) Übersichtskarte: zeigt automatisch ALLE geplanten Urlaube
-# ---------------------------------------------------------------------------
+# Übersicht über alle geplanten Urlaube
 - type: markdown
   title: 🏖️ Urlaubszähler
   content: |-
@@ -34,10 +61,7 @@
     ---
     {%- endfor %}
 
-# ---------------------------------------------------------------------------
-# 2) Einzelkarte für genau einen Urlaub
-#    entity_id an den eigenen Sensor anpassen
-# ---------------------------------------------------------------------------
+# Einzelkarte für genau einen Urlaub (entity_id anpassen)
 - type: markdown
   content: |-
     {%- set sensor = 'sensor.urlaubszaehler_urlaub_papa_gardasee' %}
@@ -49,10 +73,7 @@
 
     {{ state_attr(sensor, 'nachricht') }}
 
-# ---------------------------------------------------------------------------
-# 3) Wer hat einen Urlaub geplant? (Personen und Familien)
-#    Entity-IDs an die eigenen Namen anpassen
-# ---------------------------------------------------------------------------
+# Wer hat einen Urlaub geplant? (Entity-IDs anpassen)
 - type: entities
   title: Reisende
   entities:
