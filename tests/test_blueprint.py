@@ -28,6 +28,8 @@ from custom_components.urlaubszaehler.const import DOMAIN
 BLUEPRINT_PFAD = "urlaubszaehler/urlaub_anlegen.yaml"
 QUELLE = (
     pathlib.Path(__file__).parent.parent
+    / "custom_components"
+    / "urlaubszaehler"
     / "blueprints"
     / "automation"
     / "urlaubszaehler"

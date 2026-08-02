@@ -25,83 +25,80 @@ Mindestversion: **Home Assistant 2024.11**
 
 ---
 
-## 1. Wohin gehören die Dateien?
+## 1. Installation über HACS (empfohlen)
 
-Alles relativ zu deinem Home-Assistant-Konfigurationsverzeichnis (dort, wo auch
-die `configuration.yaml` liegt):
+[![Repository zu HACS hinzufügen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=frecem&repository=Urlaubszaehler&category=integration)
 
-```
-config/
-├── custom_components/
-│   └── urlaubszaehler/          ← kompletter Ordner aus diesem Repo
-│       ├── __init__.py
-│       ├── manifest.json
-│       ├── const.py
-│       ├── models.py
-│       ├── manager.py
-│       ├── config_flow.py
-│       ├── sensor.py
-│       ├── binary_sensor.py
-│       ├── services.yaml
-│       ├── strings.json
-│       └── translations/
-│           ├── de.json
-│           └── en.json
-├── blueprints/
-│   └── automation/
-│       └── urlaubszaehler/
-│           └── urlaub_anlegen.yaml
-└── www/
-    └── urlaubszaehler-card.js   ← die eigene Lovelace-Karte
-```
+Ein Klick auf den Knopf öffnet HACS direkt bei diesem Repository. Falls der
+Knopf nicht funktioniert (etwa weil „My Home Assistant" nicht eingerichtet ist),
+geht es von Hand genauso:
 
-Die Datei `lovelace/urlaubszaehler_karte.yaml` wird **nicht** kopiert – daraus
-fügst du dir nur die gewünschte Karte ins Dashboard ein.
+1. **HACS** öffnen → oben rechts **⋮** → **Benutzerdefinierte Repositories**
+2. Repository: `https://github.com/frecem/Urlaubszaehler`
+   Kategorie: **Integration** → **Hinzufügen**
+3. In HACS nach `Urlaubszähler` suchen → **Herunterladen**
+4. Home Assistant **neu starten**
 
-### Installation über HACS (alternativ)
+**Damit ist alles installiert.** Die Integration bringt die Lovelace-Karte, den
+Blueprint und die Beispiel-Kartenkonfigurationen mit; nichts davon muss von Hand
+kopiert oder eingetragen werden:
 
-HACS → Integrationen → ⋮ → *Benutzerdefinierte Repositories* → dieses Repository
-als Kategorie *Integration* hinzufügen → installieren.
+| Was | Wohin es kommt | Wann |
+|---|---|---|
+| Die Integration | `custom_components/urlaubszaehler/` | durch HACS |
+| Der Blueprint | `blueprints/automation/urlaubszaehler/` | beim ersten Start der Integration |
+| Die Lovelace-Karte | wird unter `/urlaubszaehler/urlaubszaehler-card.js` ausgeliefert und automatisch ins Frontend geladen | beim Start der Integration |
+| Beispiel-Karten | `custom_components/urlaubszaehler/lovelace/urlaubszaehler_karte.yaml` | durch HACS |
+
+Ein **Eintrag unter Dashboards → Ressourcen ist nicht nötig** – die Integration
+meldet die Karte selbst an. Nach dem Neustart einmal den Browser hart neu laden
+(Strg + F5), dann steht „Urlaubszähler" in der Kartenauswahl.
+
+> Der Blueprint wird bei einem Update der Integration aktualisiert – es sei
+> denn, du hast ihn selbst angepasst. Eigene Änderungen bleiben erhalten.
+
+### Installation ohne HACS
+
+Den Ordner `custom_components/urlaubszaehler/` aus diesem Repository nach
+`config/custom_components/` kopieren und Home Assistant neu starten. Mehr ist
+auch hier nicht nötig – Karte und Blueprint kommen mit.
 
 ---
 
-## 2. Aktivieren nach dem Neustart
+## 2. Einrichten
 
-1. Home Assistant **neu starten** (Entwicklerwerkzeuge → Neu starten).
-2. **Einstellungen → Geräte & Dienste → Integration hinzufügen** → nach
-   `Urlaubszähler` suchen.
-3. **Schritt 1:** Anzahl der Personen und Anzahl der Familien eintragen.
-4. **Schritt 2:** Namen der Personen eintragen (z. B. `Papa`, `Fiene`).
-5. **Schritt 3:** Familiennamen eintragen und optional festlegen, welche
+[![Integration hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=urlaubszaehler)
+
+Oder von Hand: **Einstellungen → Geräte & Dienste → Integration hinzufügen** →
+nach `Urlaubszähler` suchen.
+
+1. **Schritt 1:** Anzahl der Personen und Anzahl der Familien eintragen.
+2. **Schritt 2:** Namen der Personen eintragen (z. B. `Papa`, `Fiene`).
+3. **Schritt 3:** Familiennamen eintragen und optional festlegen, welche
    Personen zu einer Familie gehören.
 
 | Schritt 1 | Schritt 2 | Schritt 3 |
 |---|---|---|
 | ![Anzahl](docs/bilder/01-einrichtung-anzahl.png) | ![Personen](docs/bilder/02-einrichtung-personen.png) | ![Familien](docs/bilder/03-einrichtung-familien.png) |
 
-Danach hängen alle Entitäten an einem gemeinsamen Gerät:
+Danach existiert je Person und Familie eine Entität, z. B.
+`binary_sensor.urlaubszahler_papa` – diese Namen tauchen im Blueprint zur
+Auswahl auf. Alle Entitäten hängen an einem gemeinsamen Gerät:
 
 ![Geräteseite](docs/bilder/08-geraeteseite.png)
 
-Danach existiert je Person und Familie eine Entität, z. B.
-`binary_sensor.urlaubszahler_papa` – diese Namen tauchen im Blueprint zur
-Auswahl auf.
-
 > Namen später ändern: **Einstellungen → Geräte & Dienste → Urlaubszähler →
 > Konfigurieren**. Dort lassen sich auch geplante Urlaube vorzeitig löschen.
-
-### Blueprint aktivieren
-
-Nach dem Neustart: **Einstellungen → Automatisierungen & Szenen → Blueprints**.
-Taucht *„Urlaubszähler – Urlaub anlegen & erinnern"* nicht sofort auf, einmal
-über **Entwicklerwerkzeuge → YAML → Blueprints neu laden** aktualisieren.
 
 ---
 
 ## 3. Einen Urlaub anlegen
 
-**Einstellungen → Automatisierungen → Automatisierung erstellen → Aus Blueprint**
-→ *Urlaubszähler – Urlaub anlegen & erinnern*.
+**Einstellungen → Automatisierungen & Szenen → Blueprints** →
+*Urlaubszähler – Urlaub anlegen & erinnern* anklicken.
+
+Taucht der Blueprint nicht sofort auf, einmal über **Entwicklerwerkzeuge → YAML
+→ Blueprints neu laden** aktualisieren.
 
 | Feld | Bedeutung |
 |---|---|
@@ -151,21 +148,15 @@ in jeder Lovelace-Karte.
 
 ## 5. Die Urlaubszähler-Karte fürs Dashboard
 
-Eine eigene Lovelace-Karte liegt unter `www/urlaubszaehler-card.js` bei. Sie
+Die Integration bringt eine eigene Lovelace-Karte mit. Sie
 zeigt alle geplanten Urlaube als kompakte Liste und darüber eine Weltkarte:
 vom Standort des Home-Assistant-Servers führt zu jedem Reiseziel ein
 gestrichelter Bogen. Der Kartenausschnitt richtet sich automatisch nach
 Zuhause und allen Zielen; mehrere Reisen zum selben Ort laufen nebeneinander
 statt übereinander.
 
-**Einrichten:**
-
-1. `www/urlaubszaehler-card.js` nach `config/www/` kopieren.
-2. **Einstellungen → Dashboards → ⋮ → Ressourcen → Ressource hinzufügen**
-   * URL: `/local/urlaubszaehler-card.js`
-   * Typ: **JavaScript-Modul**
-3. Browser einmal hart neu laden (Strg+F5).
-4. Dashboard bearbeiten → **Karte hinzufügen** → „Urlaubszähler".
+**Einrichten:** nichts zu tun. Die Karte wird von der Integration ausgeliefert
+und angemeldet. Dashboard bearbeiten → **Karte hinzufügen** → „Urlaubszähler".
 
 **Optionen** (auch im grafischen Editor der Karte einstellbar):
 
@@ -190,9 +181,10 @@ Ein Klick auf eine Zeile öffnet die Detailansicht des jeweiligen Sensors.
 Reiseziele ohne Koordinaten erscheinen in der Liste mit dem Hinweis
 „Ort nicht gefunden", aber nicht auf der Karte.
 
-Wer nichts installieren möchte, findet in
-[`lovelace/urlaubszaehler_karte.yaml`](lovelace/urlaubszaehler_karte.yaml)
-zusätzlich reine Bordmittel-Karten (Markdown).
+Fertige Konfigurationen zum Kopieren – auch reine Bordmittel-Karten ohne die
+eigene Karte – stehen in
+[`custom_components/urlaubszaehler/lovelace/urlaubszaehler_karte.yaml`](custom_components/urlaubszaehler/lovelace/urlaubszaehler_karte.yaml).
+Nach der Installation liegt die Datei auch auf deinem Server.
 
 ### Woher kommen die Koordinaten?
 
@@ -204,7 +196,9 @@ Ist ein Ortsname mehrdeutig oder unbekannt, lässt sich im Blueprint
 setzen – manuelle Koordinaten haben immer Vorrang.
 
 Ohne Internetverbindung schlägt nur die Ortssuche fehl; der Urlaub wird
-trotzdem angelegt und der Countdown läuft normal.
+trotzdem angelegt und der Countdown läuft normal. Ein fehlgeschlagener Versuch
+wird alle 30 Minuten wiederholt – war OpenStreetMap nur kurz nicht erreichbar,
+taucht das Ziel später von allein auf der Karte auf.
 
 ### Karte neu bauen
 
@@ -263,9 +257,14 @@ jede der sechs Vorlaufzeiten geprüft.
 
 * **Auto-Delete:** Ein Hintergrundtask prüft minütlich; der Sensor verschwindet
   in der Minute, in der `Reisezeitpunkt + 24 h` überschritten wird.
+* Der Blueprint wird von der Integration bereitgestellt und bei Updates
+  erneuert – eigene Änderungen daran bleiben unangetastet.
 * Löschst du die Automatisierung, bleibt der Sensor bis zum Auto-Delete bestehen.
   Sofort entfernen: **Urlaubszähler → Konfigurieren → Geplante Urlaube entfernen**
   oder `urlaubszaehler.remove_vacation`.
+* Die Karte wird unter `/urlaubszaehler/urlaubszaehler-card.js` ausgeliefert.
+  Die Versionsnummer hängt an der URL, damit der Browser nach einem Update
+  nicht die alte Fassung aus dem Zwischenspeicher nimmt.
 * Push-Nachrichten nutzen `notify.mobile_app_<Gerätename>`. Erscheint kein
   Gerät zur Auswahl, ist die Home-Assistant-App auf dem Handy noch nicht
   eingerichtet.

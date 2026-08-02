@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Baut ``www/urlaubszaehler-card.js`` aus der Quelle und den Kartendaten.
+"""Baut die Lovelace-Karte der Integration aus Quelle und Kartendaten.
 
 Die Weltkarte stammt von Natural Earth (gemeinfrei, naturalearthdata.com).
 Der Datensatz wird heruntergeladen, auf ein für eine Übersichtskarte sinnvolles
@@ -31,7 +31,10 @@ ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 QUELLDATEI = WURZEL / "tools" / "urlaubszaehler-card.src.js"
-ZIELDATEI = WURZEL / "www" / "urlaubszaehler-card.js"
+ZIELDATEI = (
+    WURZEL / "custom_components" / "urlaubszaehler" / "frontend"
+    / "urlaubszaehler-card.js"
+)
 ZWISCHENABLAGE = WURZEL / "tools" / ".ne_50m_countries.geojson"
 
 

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import pathlib
+import shutil
 from datetime import datetime, timedelta
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.urlaubszaehler.const import (
+    BLUEPRINT_ZIEL,
     CONF_FAMILIEN,
     CONF_FAMILY_COUNT,
     CONF_MITGLIEDER,
@@ -24,6 +27,18 @@ pytest_plugins = "pytest_homeassistant_custom_component"
 def _custom_integrations(enable_custom_integrations):
     """Custom Components in allen Tests laden."""
     yield
+
+
+@pytest.fixture(autouse=True)
+def _sauberes_konfigverzeichnis(hass):
+    """Das Testkonfigurationsverzeichnis wird geteilt - Reste entfernen.
+
+    Sonst nimmt ein Test den Blueprint mit, den ein vorheriger geschrieben hat.
+    """
+    ordner = pathlib.Path(hass.config.path(BLUEPRINT_ZIEL)).parent
+    shutil.rmtree(ordner, ignore_errors=True)
+    yield
+    shutil.rmtree(ordner, ignore_errors=True)
 
 
 @pytest.fixture(autouse=True)

@@ -14,6 +14,7 @@ from homeassistant.util import dt as dt_util, slugify
 
 from .const import (
     ART_FAMILIE,
+    GEOCODE_RETRY_INTERVAL,
     ART_PERSON,
     CONF_FAMILIEN,
     CONF_MITGLIEDER,
@@ -23,6 +24,7 @@ from .const import (
     SIGNAL_VACATION_ADDED,
     SIGNAL_VACATION_REMOVED,
     STORAGE_VERSION,
+    STORE_BLUEPRINT_PRUEFSUMME,
 )
 from .geocoding import async_geocode
 from .models import Vacation
@@ -48,6 +50,10 @@ class UrlaubszaehlerManager:
         # Bereits nachgeschlagene Reiseziele, damit Nominatim nur einmal pro
         # Ort gefragt wird.
         self.geocache: dict[str, dict[str, Any]] = {}
+        # Prüfsumme des zuletzt ausgelieferten Blueprints (siehe blueprints.py).
+        self.blueprint_pruefsumme: str | None = None
+        # Zeitpunkt des letzten Nachschlagens fehlender Koordinaten.
+        self._letzter_nachtrag: datetime | None = None
 
     # ------------------------------------------------------------------
     # Teilnehmer
@@ -110,6 +116,7 @@ class UrlaubszaehlerManager:
         if not daten:
             return
         self.geocache = dict(daten.get("geocache", {}))
+        self.blueprint_pruefsumme = daten.get(STORE_BLUEPRINT_PRUEFSUMME)
         for eintrag in daten.get("vacations", []):
             try:
                 urlaub = Vacation.from_dict(eintrag)
@@ -124,6 +131,7 @@ class UrlaubszaehlerManager:
             {
                 "vacations": [urlaub.as_dict() for urlaub in self.vacations.values()],
                 "geocache": self.geocache,
+                STORE_BLUEPRINT_PRUEFSUMME: self.blueprint_pruefsumme,
             }
         )
 
@@ -215,6 +223,51 @@ class UrlaubszaehlerManager:
         )
         _LOGGER.debug("Urlaub entfernt: %s", urlaub_id)
         return True
+
+    async def async_koordinaten_nachtragen(self, jetzt: datetime | None = None) -> int:
+        """Fehlende Zielkoordinaten später erneut suchen.
+
+        War OpenStreetMap beim Anlegen nicht erreichbar (etwa wegen einer
+        Ratenbegrenzung), bliebe der Urlaub sonst dauerhaft ohne Ort und damit
+        für immer unsichtbar auf der Karte.
+        """
+        jetzt = jetzt or dt_util.utcnow()
+        offen = [
+            urlaub
+            for urlaub in self.vacations.values()
+            if not urlaub.hat_koordinaten and urlaub.koordinaten_quelle is None
+        ]
+        if not offen:
+            return 0
+        if (
+            self._letzter_nachtrag is not None
+            and jetzt - self._letzter_nachtrag < GEOCODE_RETRY_INTERVAL
+        ):
+            return 0
+        self._letzter_nachtrag = jetzt
+
+        nachgetragen = 0
+        for urlaub in offen:
+            ort = await self.async_koordinaten(urlaub.ziel, None, None)
+            if ort["breitengrad"] is None:
+                continue
+            urlaub.breitengrad = ort["breitengrad"]
+            urlaub.laengengrad = ort["laengengrad"]
+            urlaub.koordinaten_quelle = ort["koordinaten_quelle"]
+            urlaub.gefunden_als = ort["gefunden_als"]
+            nachgetragen += 1
+            _LOGGER.info(
+                "Koordinaten für '%s' nachträglich gefunden: %s",
+                urlaub.ziel,
+                urlaub.gefunden_als,
+            )
+            async_dispatcher_send(
+                self.hass, SIGNAL_VACATION_ADDED.format(self.entry.entry_id), urlaub
+            )
+
+        if nachgetragen:
+            await self.async_save()
+        return nachgetragen
 
     async def async_purge_expired(self, jetzt: datetime | None = None) -> None:
         """Alle Urlaube löschen, die länger als 24 Stunden zurückliegen."""

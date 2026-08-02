@@ -37,6 +37,8 @@ from .const import (
     UID_PARTICIPANT,
     UID_VACATION,
 )
+from .blueprints import async_blueprint_bereitstellen
+from .card import async_karte_anmelden
 from .manager import UrlaubszaehlerManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -83,6 +85,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await manager.async_load()
     await manager.async_purge_expired()
 
+    # Karte und Blueprint kommen mit der Integration - der Nutzer muss nichts
+    # von Hand kopieren oder eintragen.
+    await async_karte_anmelden(hass)
+    pruefsumme = await async_blueprint_bereitstellen(
+        hass, manager.blueprint_pruefsumme
+    )
+    if pruefsumme != manager.blueprint_pruefsumme:
+        manager.blueprint_pruefsumme = pruefsumme
+        await manager.async_save()
+
     _cleanup_stale_entities(hass, entry, manager)
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = manager
@@ -90,8 +102,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def _aufraeumen(_now) -> None:
-        """Abgelaufene Urlaube (24 h nach Reisebeginn) entfernen."""
+        """Abgelaufene Urlaube entfernen und fehlende Koordinaten nachtragen."""
         await manager.async_purge_expired()
+        await manager.async_koordinaten_nachtragen()
 
     entry.async_on_unload(
         async_track_time_interval(hass, _aufraeumen, PURGE_INTERVAL)

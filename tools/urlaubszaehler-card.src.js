@@ -99,9 +99,11 @@ function ausschnittBerechnen(punkte, breite, hoehe) {
     if (y > maxY) maxY = y;
   }
 
-  // Mindestausdehnung, damit bei nahen Zielen nicht bis auf Straßenniveau
-  // gezoomt wird (die Umrisse sind dafür zu grob).
-  const MIN_SPANNE = 4;
+  // Mindestausdehnung. Die Umrisse sind bewusst grob (Übersichtskarte);
+  // bei einer kurzen Reise würde ein enger Ausschnitt sie zu Klötzchen
+  // vergrößern. 18 Grad zeigen bei einer Reise innerhalb Europas noch
+  // erkennbare Länder.
+  const MIN_SPANNE = 18;
   let spanneLon = Math.max(maxLon - minLon, MIN_SPANNE);
   let spanneY = Math.max(maxY - minY, (MIN_SPANNE * Math.PI) / 180);
 

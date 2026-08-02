@@ -12,6 +12,16 @@ PLATFORMS: Final = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 STORAGE_VERSION: Final = 1
 
+# Mitgelieferte Lovelace-Karte
+CARD_DATEI: Final = "frontend/urlaubszaehler-card.js"
+CARD_URL: Final = f"/{DOMAIN}/urlaubszaehler-card.js"
+DATA_CARD_REGISTRIERT: Final = f"{DOMAIN}_card_url"
+
+# Mitgelieferter Blueprint
+BLUEPRINT_QUELLE: Final = "blueprints/automation/urlaubszaehler/urlaub_anlegen.yaml"
+BLUEPRINT_ZIEL: Final = "blueprints/automation/urlaubszaehler/urlaub_anlegen.yaml"
+STORE_BLUEPRINT_PRUEFSUMME: Final = "blueprint_pruefsumme"
+
 # Config-Flow / Options
 CONF_PERSON_COUNT: Final = "anzahl_personen"
 CONF_FAMILY_COUNT: Final = "anzahl_familien"
@@ -52,3 +62,7 @@ UPDATE_INTERVAL: Final = timedelta(seconds=30)
 
 # Intervall, in dem nach abgelaufenen Urlauben gesucht wird.
 PURGE_INTERVAL: Final = timedelta(minutes=1)
+
+# Abstand, in dem fehlende Zielkoordinaten erneut gesucht werden. War
+# OpenStreetMap beim Anlegen kurz nicht erreichbar, holt das den Ort nach.
+GEOCODE_RETRY_INTERVAL: Final = timedelta(minutes=30)

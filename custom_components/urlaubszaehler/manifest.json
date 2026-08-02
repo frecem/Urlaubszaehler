@@ -1,8 +1,15 @@
 {
   "domain": "urlaubszaehler",
   "name": "Urlaubszähler",
-  "codeowners": ["@frecem"],
+  "codeowners": [
+    "@frecem"
+  ],
   "config_flow": true,
+  "dependencies": [
+    "frontend",
+    "http",
+    "lovelace"
+  ],
   "documentation": "https://github.com/frecem/urlaubszaehler",
   "integration_type": "service",
   "iot_class": "calculated",

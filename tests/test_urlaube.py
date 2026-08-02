@@ -383,3 +383,59 @@ async def test_24_stunden_auch_bei_zeitumstellung(hass, eingerichtet):
         "test", ["Papa"], "Gardasee", datetime(2026, 3, 28, 20, 0)
     )
     assert urlaub.delete_ts - urlaub.start_ts == 86400
+
+
+async def test_koordinaten_werden_nachgetragen(hass, eingerichtet, monkeypatch, freezer):
+    """Ein Ausfall von OpenStreetMap darf nicht dauerhaft folgenlos bleiben."""
+    from custom_components.urlaubszaehler.const import DOMAIN as D
+
+    # Erster Versuch schlägt fehl (z. B. Ratenbegrenzung).
+    erreichbar = {"wert": False}
+
+    async def _wackelig(hass_, ziel):
+        if not erreichbar["wert"]:
+            return None
+        return {"breitengrad": 45.65, "laengengrad": 10.65,
+                "gefunden_als": f"{ziel}, Europa"}
+
+    monkeypatch.setattr(
+        "custom_components.urlaubszaehler.manager.async_geocode", _wackelig
+    )
+    await anlegen(hass, [PAPA], "Gardasee", tage=12)
+
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["breitengrad"] is None
+
+    # Später ist der Dienst wieder da.
+    erreichbar["wert"] = True
+    freezer.tick(timedelta(minutes=31))
+    manager = hass.data[D][eingerichtet.entry_id]
+    assert await manager.async_koordinaten_nachtragen() == 1
+    await hass.async_block_till_done()
+
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["breitengrad"] == 45.65
+    assert zustand.attributes["koordinaten_quelle"] == "geocoding"
+
+
+async def test_nachtrag_haelt_abstand(hass, eingerichtet, monkeypatch):
+    """Zwischen zwei Versuchen liegt ein Mindestabstand."""
+    from custom_components.urlaubszaehler.const import DOMAIN as D
+
+    versuche: list[str] = []
+
+    async def _immer_fehlschlag(hass_, ziel):
+        versuche.append(ziel)
+        return None
+
+    monkeypatch.setattr(
+        "custom_components.urlaubszaehler.manager.async_geocode", _immer_fehlschlag
+    )
+    await anlegen(hass, [PAPA], "Gardasee", tage=12)
+    assert versuche == ["Gardasee"]
+
+    manager = hass.data[D][eingerichtet.entry_id]
+    await manager.async_koordinaten_nachtragen()
+    await manager.async_koordinaten_nachtragen()
+    # Nur ein einziger zusätzlicher Versuch innerhalb der Wartezeit.
+    assert versuche == ["Gardasee", "Gardasee"]
