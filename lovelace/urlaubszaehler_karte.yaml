@@ -1,0 +1,62 @@
+# Lovelace-Karten für den Urlaubszähler
+# ---------------------------------------------------------------------------
+# Einfügen über: Dashboard → Bearbeiten → Karte hinzufügen → "Manuell"
+# und dort den Inhalt einer Karte ab "type:" einfügen (ohne den Listenstrich).
+#
+# Der Sensor-Status ist der Reisebeginn als Unix-Zeit (Dezimal). Tage, Stunden
+# und Minuten werden hier live daraus abgeleitet – die Anzeige bleibt bei
+# 0/0/0 stehen, sobald der Reisezeitpunkt erreicht ist.
+
+# ---------------------------------------------------------------------------
+# 1) Übersichtskarte: zeigt automatisch ALLE geplanten Urlaube
+# ---------------------------------------------------------------------------
+- type: markdown
+  title: 🏖️ Urlaubszähler
+  content: |-
+    {%- set urlaube = states.sensor
+          | selectattr('attributes.urlaub_id', 'defined')
+          | sort(attribute='attributes.start_zeitstempel') | list %}
+    {%- if urlaube | count == 0 %}
+    _Aktuell ist kein Urlaub geplant._
+    {%- endif %}
+    {%- for u in urlaube %}
+    {%- set rest = [ (u.state | float(0)) - as_timestamp(now()), 0 ] | max %}
+    {%- set tage = (rest // 86400) | int %}
+    {%- set stunden = ((rest % 86400) // 3600) | int %}
+    {%- set minuten = ((rest % 3600) // 60) | int %}
+
+    ## {{ u.attributes.wer }} → {{ u.attributes.ziel }}
+
+    # {{ tage }} T · {{ stunden }} Std · {{ minuten }} Min
+
+    Abfahrt: **{{ (u.state | float(0)) | timestamp_custom('%d.%m.%Y, %H:%M') }} Uhr**
+
+    ---
+    {%- endfor %}
+
+# ---------------------------------------------------------------------------
+# 2) Einzelkarte für genau einen Urlaub
+#    entity_id an den eigenen Sensor anpassen
+# ---------------------------------------------------------------------------
+- type: markdown
+  content: |-
+    {%- set sensor = 'sensor.urlaubszaehler_urlaub_papa_gardasee' %}
+    {%- set rest = [ states(sensor) | float(0) - as_timestamp(now()), 0 ] | max %}
+
+    # {{ (rest // 86400) | int }} Tage
+
+    ### {{ ((rest % 86400) // 3600) | int }} Stunden, {{ ((rest % 3600) // 60) | int }} Minuten
+
+    {{ state_attr(sensor, 'nachricht') }}
+
+# ---------------------------------------------------------------------------
+# 3) Wer hat einen Urlaub geplant? (Personen und Familien)
+#    Entity-IDs an die eigenen Namen anpassen
+# ---------------------------------------------------------------------------
+- type: entities
+  title: Reisende
+  entities:
+    - entity: binary_sensor.urlaubszaehler_papa
+      secondary_info: last-changed
+    - entity: binary_sensor.urlaubszaehler_fiene
+    - entity: binary_sensor.urlaubszaehler_familie_frece

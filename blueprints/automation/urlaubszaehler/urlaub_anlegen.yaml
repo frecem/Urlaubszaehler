@@ -1,0 +1,184 @@
+blueprint:
+  name: Urlaubszähler – Urlaub anlegen & erinnern
+  description: >-
+    Legt einen Urlaub im Urlaubszähler an (eigener Countdown-Sensor) und
+    verschickt Push-Benachrichtigungen an die Mobilgeräte – standardmäßig
+    60, 40, 20, 10, 5 und 1 Tag vor der Abreise.
+
+
+    Für jeden Urlaub wird eine eigene Automatisierung aus diesem Blueprint
+    erstellt; dadurch lassen sich beliebig viele Urlaube parallel verwalten.
+    Der Sensor entsteht sofort beim Speichern der Automatisierung und wird
+    exakt 24 Stunden nach dem Reisezeitpunkt automatisch wieder entfernt.
+  domain: automation
+  source_url: https://github.com/frecem/urlaubszaehler/blob/main/blueprints/automation/urlaubszaehler/urlaub_anlegen.yaml
+  input:
+    reise:
+      name: Reise
+      icon: mdi:beach
+      collapsed: false
+      input:
+        teilnehmer:
+          name: Wer fährt in den Urlaub?
+          description: >-
+            Eine Person, mehrere Personen oder eine ganze Familie – die
+            Auswahl stammt aus den im Urlaubszähler angelegten Namen.
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - integration: urlaubszaehler
+                  domain: binary_sensor
+        ziel:
+          name: Wohin geht die Reise?
+          description: Das Reiseziel, z. B. "Gardasee".
+          selector:
+            text:
+        start:
+          name: Wann geht es los?
+          description: >-
+            Datum und genaue Uhrzeit des Urlaubsstarts. Die Angabe wird in der
+            in Home Assistant eingestellten Zeitzone (z. B. Europe/Berlin)
+            interpretiert.
+          selector:
+            datetime:
+
+    benachrichtigung:
+      name: Benachrichtigungen
+      icon: mdi:cellphone-message
+      collapsed: false
+      input:
+        mobilgeraete:
+          name: Mobilgeräte
+          description: >-
+            Geräte mit der Home-Assistant-App, die die Push-Nachrichten
+            erhalten sollen.
+          default: []
+          selector:
+            device:
+              multiple: true
+              filter:
+                - integration: mobile_app
+        vorlaufzeiten:
+          name: Vorlaufzeiten (Tage vorher)
+          description: An diesen Tagen vor der Abreise wird erinnert.
+          default: ["60", "40", "20", "10", "5", "1"]
+          selector:
+            select:
+              multiple: true
+              options:
+                - label: 60 Tage vorher
+                  value: "60"
+                - label: 40 Tage vorher
+                  value: "40"
+                - label: 20 Tage vorher
+                  value: "20"
+                - label: 10 Tage vorher
+                  value: "10"
+                - label: 5 Tage vorher
+                  value: "5"
+                - label: 1 Tag vorher
+                  value: "1"
+        erinnerungszeit:
+          name: Uhrzeit der Erinnerung
+          description: Zu dieser Uhrzeit wird geprüft und ggf. benachrichtigt.
+          default: "09:00:00"
+          selector:
+            time:
+        zusaetzliche_aktion:
+          name: Zusätzliche Aktion (optional)
+          description: >-
+            Wird zusammen mit der Push-Nachricht ausgeführt, z. B. eine
+            Sprachausgabe oder eine Telegram-Nachricht. Die Variablen
+            wer_text, ziel und tage_bis stehen zur Verfügung.
+          default: []
+          selector:
+            action:
+
+mode: single
+max_exceeded: silent
+
+variables:
+  teilnehmer: !input teilnehmer
+  ziel: !input ziel
+  start: !input start
+  vorlaufzeiten: !input vorlaufzeiten
+  mobilgeraete: !input mobilgeraete
+  urlaub_id: "{{ this.entity_id | replace('automation.', '') }}"
+  namen: >-
+    {{ teilnehmer | map('state_attr', 'anzeigename') | reject('none') | list }}
+  wer_text: >-
+    {% if namen | count > 1 %}
+      {{ namen[:-1] | join(', ') }} und {{ namen[-1] }}
+    {% elif namen | count == 1 %}
+      {{ namen[0] }}
+    {% else %}
+      uns
+    {% endif %}
+  # Ganze Kalendertage bis zur Abreise (zeitzonensicher, ohne Umrechnung).
+  tage_bis: >-
+    {% set abfahrt = as_datetime(start, none) %}
+    {% if abfahrt is none %}-999{% else %}{{ (abfahrt.date() - now().date()).days }}{% endif %}
+
+trigger:
+  # Urlaub direkt beim Speichern der Automatisierung anlegen …
+  - platform: event
+    event_type: automation_reloaded
+    id: anlegen
+  # … und nach jedem Neustart wiederherstellen.
+  - platform: homeassistant
+    event: start
+    id: anlegen
+  - platform: time
+    at: !input erinnerungszeit
+    id: erinnern
+
+condition: []
+
+action:
+  - choose:
+      # ----------------------------------------------------------------
+      # Urlaub im Urlaubszähler anlegen bzw. aktualisieren
+      # ----------------------------------------------------------------
+      - conditions:
+          - condition: trigger
+            id: anlegen
+          - condition: template
+            value_template: "{{ tage_bis | int(-999) >= 0 }}"
+        sequence:
+          - service: urlaubszaehler.add_vacation
+            data:
+              teilnehmer: "{{ teilnehmer }}"
+              ziel: "{{ ziel }}"
+              start: "{{ start }}"
+              urlaub_id: "{{ urlaub_id }}"
+
+      # ----------------------------------------------------------------
+      # Push-Benachrichtigung zu den gewählten Vorlaufzeiten
+      # ----------------------------------------------------------------
+      - conditions:
+          - condition: trigger
+            id: erinnern
+          - condition: template
+            value_template: >-
+              {{ tage_bis | int(-999) | string in (vorlaufzeiten | map('string') | list) }}
+        sequence:
+          - repeat:
+              for_each: "{{ mobilgeraete }}"
+              sequence:
+                - service: >-
+                    notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}
+                  data:
+                    title: >-
+                      🏖️ Noch {{ tage_bis }} {{ 'Tag' if tage_bis | int == 1 else 'Tage' }} bis {{ ziel }}
+                    message: >-
+                      Der Urlaub von {{ wer_text | trim }} ist in {{ tage_bis }}
+                      {{ 'Tag' if tage_bis | int == 1 else 'Tagen' }}.
+                      Die Reise geht nach {{ ziel }}.
+                    data:
+                      tag: "urlaubszaehler_{{ urlaub_id }}"
+                      group: urlaubszaehler
+                      notification_icon: mdi:beach
+          # Optionale Zusatzaktion (leer = wird übersprungen).
+          - choose: []
+            default: !input zusaetzliche_aktion
