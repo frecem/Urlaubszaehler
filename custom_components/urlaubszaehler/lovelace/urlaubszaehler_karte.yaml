@@ -20,7 +20,7 @@
   map_height: 260
   # max: 5                       # optional: nur die nächsten 5 Urlaube
   # entities:                    # optional: feste Auswahl statt Automatik
-  #   - sensor.urlaubszahler_urlaub_papa_und_fiene_gardasee
+  #   - sensor.urlaubszahler_urlaub_papa_und_mama_gardasee
 
 # Nur die Liste, ohne Karte
 - type: custom:urlaubszaehler-card
@@ -64,7 +64,7 @@
 # Einzelkarte für genau einen Urlaub (entity_id anpassen)
 - type: markdown
   content: |-
-    {%- set sensor = 'sensor.urlaubszahler_urlaub_papa_und_fiene_gardasee' %}
+    {%- set sensor = 'sensor.urlaubszahler_urlaub_papa_und_mama_gardasee' %}
     {%- set rest = [ states(sensor) | float(0) - as_timestamp(now()), 0 ] | max %}
 
     # {{ (rest // 86400) | int }} Tage
@@ -79,5 +79,5 @@
   entities:
     - entity: binary_sensor.urlaubszahler_papa
       secondary_info: last-changed
-    - entity: binary_sensor.urlaubszahler_fiene
-    - entity: binary_sensor.urlaubszahler_familie_frece
+    - entity: binary_sensor.urlaubszahler_mama
+    - entity: binary_sensor.urlaubszahler_familie_muster

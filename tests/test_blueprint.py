@@ -37,7 +37,7 @@ QUELLE = (
 )
 
 PAPA = "binary_sensor.urlaubszahler_papa"
-FIENE = "binary_sensor.urlaubszahler_fiene"
+FIENE = "binary_sensor.urlaubszahler_mama"
 
 
 @pytest.fixture
@@ -128,9 +128,9 @@ async def test_urlaub_wird_beim_speichern_angelegt(
     hass.bus.async_fire("automation_reloaded")
     await hass.async_block_till_done()
 
-    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_und_fiene_gardasee")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_und_mama_gardasee")
     assert zustand is not None
-    assert zustand.attributes["wer"] == "Papa und Fiene"
+    assert zustand.attributes["wer"] == "Papa und Mama"
     assert zustand.attributes["ziel"] == "Gardasee"
     assert zustand.attributes["breitengrad"] == 45.65
     # 60 Kalendertage; je nach Tageszeit sind das 59 oder 60 volle Tage.
@@ -267,10 +267,10 @@ async def test_push_an_mehrere_geraete(
             identifiers={("mobile_app", name)},
             name=name,
         ).id
-        for name in ("Handy Papa", "Handy Fiene")
+        for name in ("Handy Papa", "Handy Mama")
     ]
     rufe_a = async_mock_service(hass, "notify", "mobile_app_handy_papa")
-    rufe_b = async_mock_service(hass, "notify", "mobile_app_handy_fiene")
+    rufe_b = async_mock_service(hass, "notify", "mobile_app_handy_mama")
 
     jetzt = dt_util.now().replace(hour=8, minute=59, second=0, microsecond=0)
     freezer.move_to(jetzt)

@@ -34,21 +34,21 @@ async def test_kompletter_ablauf(hass):
 
     ergebnis = await hass.config_entries.flow.async_configure(
         ergebnis["flow_id"],
-        {"Person 1": "Papa", "Person 2": "Fiene", "Person 3": "Mama"},
+        {"Person 1": "Papa", "Person 2": "Mama", "Person 3": "Kind"},
     )
     assert ergebnis["step_id"] == "familien"
 
     ergebnis = await hass.config_entries.flow.async_configure(
         ergebnis["flow_id"],
         {
-            "Familie 1": "Familie Frece",
-            "Mitglieder von Familie 1": ["Papa", "Fiene"],
+            "Familie 1": "Familie Muster",
+            "Mitglieder von Familie 1": ["Papa", "Mama"],
         },
     )
     assert ergebnis["type"] is FlowResultType.CREATE_ENTRY
-    assert ergebnis["data"][CONF_PERSONEN] == ["Papa", "Fiene", "Mama"]
+    assert ergebnis["data"][CONF_PERSONEN] == ["Papa", "Mama", "Kind"]
     assert ergebnis["data"][CONF_FAMILIEN] == [
-        {CONF_NAME: "Familie Frece", CONF_MITGLIEDER: ["Papa", "Fiene"]}
+        {CONF_NAME: "Familie Muster", CONF_MITGLIEDER: ["Papa", "Mama"]}
     ]
 
 
@@ -124,9 +124,9 @@ async def test_optionen_namen_aendern(hass, eingerichtet):
     await hass.async_block_till_done()
 
     assert hass.states.get("binary_sensor.urlaubszahler_oma") is not None
-    # Fiene und die Familie sind restlos verschwunden.
-    assert hass.states.get("binary_sensor.urlaubszahler_fiene") is None
-    assert hass.states.get("binary_sensor.urlaubszahler_familie_frece") is None
+    # Mama und die Familie sind restlos verschwunden.
+    assert hass.states.get("binary_sensor.urlaubszahler_mama") is None
+    assert hass.states.get("binary_sensor.urlaubszahler_familie_muster") is None
 
 
 async def test_optionen_ohne_urlaube(hass, eingerichtet):

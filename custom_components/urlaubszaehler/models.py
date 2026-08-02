@@ -12,7 +12,7 @@ from .const import AUTO_DELETE_AFTER
 
 
 def format_namen(namen: list[str]) -> str:
-    """Baue eine natürlichsprachige Aufzählung: 'Papa, Fiene und Mama'."""
+    """Baue eine natürlichsprachige Aufzählung: 'Papa, Mama und Kind'."""
     namen = [n for n in namen if n]
     if not namen:
         return "unbekannt"

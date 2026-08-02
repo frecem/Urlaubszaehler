@@ -13,8 +13,8 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from custom_components.urlaubszaehler.const import DOMAIN
 
 PAPA = "binary_sensor.urlaubszahler_papa"
-FIENE = "binary_sensor.urlaubszahler_fiene"
-FAMILIE = "binary_sensor.urlaubszahler_familie_frece"
+FIENE = "binary_sensor.urlaubszahler_mama"
+FAMILIE = "binary_sensor.urlaubszahler_familie_muster"
 
 
 async def anlegen(hass, teilnehmer, ziel, tage=12, **extra):
@@ -48,7 +48,7 @@ async def test_teilnehmer_entitaeten(hass, eingerichtet):
     assert hass.states.get(PAPA).attributes["anzeigename"] == "Papa"
     assert hass.states.get(PAPA).attributes["art"] == "person"
     assert hass.states.get(FAMILIE).attributes["art"] == "familie"
-    assert hass.states.get(FAMILIE).attributes["mitglieder"] == ["Papa", "Fiene"]
+    assert hass.states.get(FAMILIE).attributes["mitglieder"] == ["Papa", "Mama"]
 
 
 async def test_alle_services_vorhanden(hass, eingerichtet):
@@ -76,13 +76,13 @@ async def test_urlaub_ueber_entitaeten(hass, eingerichtet):
     """Der Blueprint übergibt Entity-IDs; daraus werden die Namen aufgelöst."""
     antwort = await anlegen(hass, [PAPA, FIENE], "Gardasee")
 
-    assert antwort["wer"] == "Papa und Fiene"
+    assert antwort["wer"] == "Papa und Mama"
     assert antwort["breitengrad"] == 45.65
     assert antwort["koordinaten_quelle"] == "geocoding"
-    assert "Der Urlaub von Papa und Fiene ist in" in antwort["nachricht"]
+    assert "Der Urlaub von Papa und Mama ist in" in antwort["nachricht"]
     assert "Die Reise geht nach Gardasee." in antwort["nachricht"]
 
-    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_und_fiene_gardasee")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_und_mama_gardasee")
     assert zustand is not None
     assert hass.states.get(PAPA).state == "on"
     assert hass.states.get(FIENE).state == "on"
@@ -99,12 +99,12 @@ async def test_familie_zieht_mitglieder_mit(hass, eingerichtet):
     """Fährt die Familie, gelten auch ihre Mitglieder als verreist."""
     await anlegen(hass, [FAMILIE], "Lappland")
 
-    zustand = hass.states.get("sensor.urlaubszahler_urlaub_familie_frece_lappland")
-    assert zustand.attributes["namen"] == ["Familie Frece"]
-    assert zustand.attributes["mitglieder"] == ["Papa", "Fiene"]
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_familie_muster_lappland")
+    assert zustand.attributes["namen"] == ["Familie Muster"]
+    assert zustand.attributes["mitglieder"] == ["Papa", "Mama"]
     assert zustand.attributes["arten"] == ["familie"]
 
-    # Papa und Fiene sind über die Familie beteiligt.
+    # Papa und Mama sind über die Familie beteiligt.
     assert hass.states.get(PAPA).state == "on"
     assert hass.states.get(FIENE).state == "on"
     assert hass.states.get(PAPA).attributes["anzahl_urlaube"] == 1
@@ -310,7 +310,7 @@ async def test_urlaube_ueberleben_neustart(hass, eingerichtet):
 
     assert hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee") is not None
     assert (
-        hass.states.get("sensor.urlaubszahler_urlaub_familie_frece_lappland")
+        hass.states.get("sensor.urlaubszahler_urlaub_familie_muster_lappland")
         is not None
     )
 

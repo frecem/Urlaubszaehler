@@ -83,9 +83,9 @@ def eintrag() -> MockConfigEntry:
         data={
             CONF_PERSON_COUNT: 2,
             CONF_FAMILY_COUNT: 1,
-            CONF_PERSONEN: ["Papa", "Fiene"],
+            CONF_PERSONEN: ["Papa", "Mama"],
             CONF_FAMILIEN: [
-                {CONF_NAME: "Familie Frece", CONF_MITGLIEDER: ["Papa", "Fiene"]}
+                {CONF_NAME: "Familie Muster", CONF_MITGLIEDER: ["Papa", "Mama"]}
             ],
         },
     )

@@ -9,8 +9,9 @@ Anlegen neuer Urlaube und für Push-Benachrichtigungen zu festen Vorlaufzeiten.
   <img src="docs/bilder/07-karte-dunkel.png" width="49%" alt="Urlaubszähler-Karte im dunklen Design">
 </p>
 
-*Alle Bilder in dieser Anleitung sind echte Aufnahmen aus einer laufenden
-Home-Assistant-Instanz (2026.2) mit dieser Integration.*
+*Alle Bilder sind echte Aufnahmen aus einer laufenden Home-Assistant-Instanz
+(2026.2) mit dieser Integration. Sie zeigen ausschließlich erfundene
+Beispieldaten – siehe [Datenschutz](#8-datenschutz).*
 
 * Einrichtung komplett über die UI (Config Flow) – **keine Helfer von Hand anlegen**.
   `input_datetime`, `input_text` & Co. sind nicht nötig; die Integration verwaltet
@@ -27,7 +28,7 @@ Mindestversion: **Home Assistant 2024.11**
 
 ## 1. Installation über HACS (empfohlen)
 
-[![Repository zu HACS hinzufügen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=frecem&repository=Urlaubszaehler&category=integration)
+[![Repository zu HACS hinzufügen](docs/badges/hacs.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=frecem&repository=Urlaubszaehler&category=integration)
 
 Ein Klick auf den Knopf öffnet HACS direkt bei diesem Repository. Falls der
 Knopf nicht funktioniert (etwa weil „My Home Assistant" nicht eingerichtet ist),
@@ -67,13 +68,13 @@ auch hier nicht nötig – Karte und Blueprint kommen mit.
 
 ## 2. Einrichten
 
-[![Integration hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=urlaubszaehler)
+[![Integration hinzufügen](docs/badges/integration.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=urlaubszaehler)
 
 Oder von Hand: **Einstellungen → Geräte & Dienste → Integration hinzufügen** →
 nach `Urlaubszähler` suchen.
 
 1. **Schritt 1:** Anzahl der Personen und Anzahl der Familien eintragen.
-2. **Schritt 2:** Namen der Personen eintragen (z. B. `Papa`, `Fiene`).
+2. **Schritt 2:** Namen der Personen eintragen (z. B. `Papa`, `Mama`).
 3. **Schritt 3:** Familiennamen eintragen und optional festlegen, welche
    Personen zu einer Familie gehören.
 
@@ -119,7 +120,7 @@ Blueprint an.
 
 ## 4. Der Sensor
 
-Pro Urlaub entsteht eine Entität wie `sensor.urlaubszahler_urlaub_papa_und_fiene_gardasee`.
+Pro Urlaub entsteht eine Entität wie `sensor.urlaubszahler_urlaub_papa_und_mama_gardasee`.
 
 **Status:** der Reisebeginn als **Unix-Zeit (Dezimal, Sekunden)**. Die Uhrzeit
 wird in der in Home Assistant eingestellten Zeitzone (z. B. `Europe/Berlin`)
@@ -131,8 +132,8 @@ in jeder Lovelace-Karte.
 
 | Attribut | Beispiel |
 |---|---|
-| `nachricht` | `Der Urlaub von Papa und Fiene ist in 12 Tagen, 5 Stunden und 42 Minuten. Die Reise geht nach Gardasee.` |
-| `wer` / `namen` | `Papa und Fiene` / `["Papa", "Fiene"]` |
+| `nachricht` | `Der Urlaub von Papa und Mama ist in 12 Tagen, 5 Stunden und 42 Minuten. Die Reise geht nach Gardasee.` |
+| `wer` / `namen` | `Papa und Mama` / `["Papa", "Mama"]` |
 | `ziel` | `Gardasee` |
 | `start` / `start_zeitstempel` | `2026-08-14T07:30:00+02:00` / `1786764600.0` |
 | `tage`, `stunden`, `minuten` | `12`, `5`, `42` (stoppen bei `0`) |
@@ -226,7 +227,7 @@ action: urlaubszaehler.add_vacation
 data:
   teilnehmer:
     - binary_sensor.urlaubszahler_papa
-    - binary_sensor.urlaubszahler_fiene
+    - binary_sensor.urlaubszahler_mama
   ziel: Gardasee
   start: "2026-08-14 07:30:00"
   urlaub_id: sommerurlaub_2026
@@ -253,7 +254,51 @@ jede der sechs Vorlaufzeiten geprüft.
 
 ---
 
-## 8. Gut zu wissen
+## 8. Datenschutz
+
+Kurz gesagt: Die Integration verlässt dein Netzwerk nur an einer einzigen
+Stelle, und die kannst du abschalten.
+
+**Was das Haus verlässt**
+
+| Wann | Wohin | Was |
+|---|---|---|
+| Beim Anlegen eines Urlaubs, einmal je Reiseziel | `nominatim.openstreetmap.org` | Der eingetippte Ortsname (z. B. „Gardasee"), die eingestellte Sprache und ein Kennzeichen der Integration als User-Agent |
+
+Das Ergebnis wird dauerhaft gespeichert; derselbe Ort wird kein zweites Mal
+abgefragt. Es werden **keine** Namen, Reisedaten, Koordinaten deines Zuhauses
+oder Gerätekennungen übertragen. Nominatim ist ein Dienst der OpenStreetMap
+Foundation (Sitz in Großbritannien);
+[Datenschutzhinweise](https://wiki.osmfoundation.org/wiki/Privacy_Policy).
+
+**So vermeidest du auch diese eine Anfrage:** Im Blueprint *„Zielort selbst auf
+der Karte setzen"* einschalten und den Punkt von Hand setzen. Dann findet gar
+keine Ortssuche statt und die Integration arbeitet vollständig offline.
+
+**Was das Haus nicht verlässt**
+
+* Die Weltkarte steckt als Vektorgrafik in der Karte selbst – es werden
+  **keine Kartenkacheln** von fremden Servern geladen. Kein Google Maps,
+  kein Mapbox, keine Zählpixel.
+* Keine Telemetrie, keine Nutzungsstatistik, keine externen Schriftarten
+  oder Skripte.
+* Alle Urlaubsdaten liegen ausschließlich in
+  `.storage/urlaubszaehler.<entry_id>` auf deinem eigenen Server.
+* Push-Nachrichten laufen über die Home-Assistant-App und nehmen den Weg, den
+  du dort ohnehin nutzt.
+
+**Zu den Bildern in dieser Anleitung**
+
+Alle Screenshots wurden mit erfundenen Beispieldaten erzeugt: „Papa", „Mama",
+„Kind", „Familie Muster". Der Heimatmarker auf der Karte liegt auf dem
+geografischen Mittelpunkt Deutschlands (51,1657° N / 10,4515° O) und damit auf
+keiner Wohnanschrift. Die Badges oben liegen als SVG im Repository, damit beim
+Betrachten der Anleitung – auch innerhalb von HACS – keine Anfrage an einen
+fremden Server entsteht.
+
+---
+
+## 9. Gut zu wissen
 
 * **Auto-Delete:** Ein Hintergrundtask prüft minütlich; der Sensor verschwindet
   in der Minute, in der `Reisezeitpunkt + 24 h` überschritten wird.
