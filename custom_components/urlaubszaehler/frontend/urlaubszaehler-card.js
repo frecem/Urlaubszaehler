@@ -11,7 +11,10 @@
  * Kartendaten: Natural Earth (public domain), vereinfacht und delta-kodiert.
  */
 
-const KARTEN_VERSION = "1.0.0";
+const KARTEN_VERSION = "1.1.0";
+
+/** Pfad des mitgelieferten Blueprints im Konfigurationsverzeichnis. */
+const BLUEPRINT_PFAD = "urlaubszaehler/urlaub_anlegen.yaml";
 
 /* --------------------------------------------------------------------------
  * Weltkarte: Dekodierung der eingebetteten Umrisse
@@ -185,6 +188,7 @@ class UrlaubszaehlerCard extends HTMLElement {
     this._kartenbreite = 0;
     this._takt = null;
     this._beobachter = null;
+    this._geraete = null;
   }
 
   static getStubConfig() {
@@ -201,10 +205,23 @@ class UrlaubszaehlerCard extends HTMLElement {
       show_map: true,
       map_height: 260,
       max: 0,
+      show_add: true,
+      blueprint_path: BLUEPRINT_PFAD,
       ...config,
     };
     this._signatur = "";
     this._aufbauen();
+  }
+
+  /** Größe in einer Abschnitts-Ansicht (Sections). */
+  getGridOptions() {
+    const zeilen = 2 + (this._config.show_map ? 4 : 0) + (this._config.show_add ? 1 : 0);
+    return {
+      columns: "full",
+      min_columns: 6,
+      rows: zeilen + Math.max(1, this._urlaube.length) * 2,
+      min_rows: 4,
+    };
   }
 
   set hass(hass) {
@@ -356,6 +373,111 @@ class UrlaubszaehlerCard extends HTMLElement {
           stroke-width: 3px;
           stroke-linejoin: round;
         }
+        .fuss { padding: 4px var(--uz-abstand) var(--uz-abstand); }
+        .fuss:empty { display: none; }
+        .knopf {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          border: none;
+          border-radius: 999px;
+          padding: 10px 20px;
+          font: inherit;
+          font-weight: 500;
+          cursor: pointer;
+          background: var(--primary-color);
+          color: var(--text-primary-color, #fff);
+        }
+        .knopf:hover { filter: brightness(1.1); }
+        .knopf:disabled { opacity: 0.6; cursor: default; }
+        .knopf.leise {
+          background: transparent;
+          color: var(--primary-color);
+          padding: 10px 12px;
+        }
+        .dialog-huelle {
+          position: fixed;
+          inset: 0;
+          z-index: 9;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          background: rgba(0, 0, 0, 0.5);
+        }
+        .dialog-huelle[hidden] { display: none; }
+        .dialog {
+          width: min(460px, 100%);
+          max-height: 90vh;
+          overflow-y: auto;
+          border-radius: 16px;
+          padding: 20px;
+          background: var(--card-background-color, var(--ha-card-background, #fff));
+          color: var(--primary-text-color);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .dialog h2 { margin: 0 0 4px; font-size: 1.3em; font-weight: 500; }
+        .dialog p.hinweis {
+          margin: 0 0 16px;
+          color: var(--secondary-text-color);
+          font-size: 0.9em;
+        }
+        .feld { margin-bottom: 16px; }
+        .feld > label.titel {
+          display: block;
+          margin-bottom: 6px;
+          font-weight: 500;
+        }
+        .feld input[type="text"],
+        .feld input[type="date"],
+        .feld input[type="time"] {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 10px;
+          font: inherit;
+          color: var(--primary-text-color);
+          background: var(--secondary-background-color);
+          border: 1px solid var(--divider-color);
+          border-radius: 8px;
+        }
+        .zeitzeile { display: flex; gap: 10px; }
+        .zeitzeile > * { flex: 1; }
+        .auswahl {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .auswahl label {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 12px;
+          border: 1px solid var(--divider-color);
+          border-radius: 999px;
+          cursor: pointer;
+        }
+        .auswahl label:has(input:checked) {
+          border-color: var(--primary-color);
+          background: color-mix(in srgb, var(--primary-color) 14%, transparent);
+        }
+        .auswahl.leer {
+          color: var(--secondary-text-color);
+          font-size: 0.9em;
+        }
+        .fehler {
+          margin: 0 0 12px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          background: color-mix(in srgb, var(--error-color, #db4437) 16%, transparent);
+          color: var(--error-color, #db4437);
+          font-size: 0.9em;
+        }
+        .dialog-knoepfe {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          margin-top: 4px;
+        }
         @media (max-width: 460px) {
           .zeile {
             grid-template-columns: 10px 1fr;
@@ -368,11 +490,27 @@ class UrlaubszaehlerCard extends HTMLElement {
         <div class="kopf"></div>
         <div class="karte"></div>
         <div class="liste"></div>
+        <div class="fuss"></div>
       </ha-card>
+      <div class="dialog-huelle" hidden>
+        <div class="dialog" role="dialog" aria-modal="true"
+             aria-label="Neuen Urlaub anlegen"></div>
+      </div>
     `;
     this._kopfEl = this.shadowRoot.querySelector(".kopf");
     this._kartenEl = this.shadowRoot.querySelector(".karte");
     this._listenEl = this.shadowRoot.querySelector(".liste");
+    this._fussEl = this.shadowRoot.querySelector(".fuss");
+    this._huelleEl = this.shadowRoot.querySelector(".dialog-huelle");
+    this._dialogEl = this.shadowRoot.querySelector(".dialog");
+    this._huelleEl.addEventListener("click", (e) => {
+      if (e.target === this._huelleEl) this._dialogSchliessen();
+    });
+    // Der Beobachter hing am alten, nun ersetzten Element.
+    if (this._beobachter) {
+      this._beobachter.disconnect();
+      this._beobachter = null;
+    }
     this._breiteBeobachten();
   }
 
@@ -411,6 +549,7 @@ class UrlaubszaehlerCard extends HTMLElement {
 
     this._karteZeichnen();
     this._listeZeichnen();
+    this._fussZeichnen();
     this._countdownAktualisieren();
   }
 
@@ -581,6 +720,205 @@ class UrlaubszaehlerCard extends HTMLElement {
     });
   }
 
+  /* ------------------------------------------------- Urlaub anlegen */
+
+  _fussZeichnen() {
+    // Automatisierungen anlegen darf nur ein Administrator.
+    const erlaubt = this._config.show_add && this._hass?.user?.is_admin !== false;
+    if (!erlaubt) {
+      this._fussEl.innerHTML = "";
+      return;
+    }
+    this._fussEl.innerHTML =
+      `<button class="knopf" type="button">＋ Urlaub anlegen</button>`;
+    this._fussEl.querySelector("button").addEventListener("click", () =>
+      this._dialogOeffnen(),
+    );
+  }
+
+  /** Alle Teilnehmer-Entitäten des Urlaubszählers. */
+  _teilnehmer() {
+    const zustaende = this._hass?.states ?? {};
+    return Object.keys(zustaende)
+      .filter(
+        (id) =>
+          id.startsWith("binary_sensor.") &&
+          zustaende[id].attributes?.anzeigename !== undefined,
+      )
+      .map((id) => ({ id, name: zustaende[id].attributes.anzeigename }))
+      .sort((a, b) => a.name.localeCompare(b.name, "de"));
+  }
+
+  /** Geräte mit der Home-Assistant-App (einmal je Sitzung geladen). */
+  async _geraeteLaden() {
+    if (this._geraete) return this._geraete;
+    try {
+      const alle = await this._hass.callWS({ type: "config/device_registry/list" });
+      this._geraete = alle
+        .filter((g) => (g.identifiers || []).some((i) => i[0] === "mobile_app"))
+        .map((g) => ({ id: g.id, name: g.name_by_user || g.name }))
+        .sort((a, b) => (a.name || "").localeCompare(b.name || "", "de"));
+    } catch (fehler) {
+      this._geraete = [];
+    }
+    return this._geraete;
+  }
+
+  async _dialogOeffnen() {
+    const geraete = await this._geraeteLaden();
+    const teilnehmer = this._teilnehmer();
+
+    // Vorschlag: morgen, 08:00 Uhr.
+    const morgen = new Date(Date.now() + 86400000);
+    const datum = morgen.toISOString().slice(0, 10);
+
+    const liste = (eintraege, name, leerText) =>
+      eintraege.length
+        ? `<div class="auswahl">${eintraege
+            .map(
+              (e) =>
+                `<label><input type="checkbox" name="${name}" ` +
+                `value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</label>`,
+            )
+            .join("")}</div>`
+        : `<div class="auswahl leer">${leerText}</div>`;
+
+    this._dialogEl.innerHTML = `
+      <h2>Neuen Urlaub anlegen</h2>
+      <p class="hinweis">Es wird eine Automatisierung aus dem Blueprint
+        erstellt – mit Countdown-Sensor und Push-Erinnerungen.</p>
+      <div class="fehler" hidden></div>
+      <div class="feld">
+        <label class="titel">Wer fährt in den Urlaub?</label>
+        ${liste(teilnehmer, "teilnehmer",
+          "Keine Personen angelegt – bitte zuerst den Urlaubszähler einrichten.")}
+      </div>
+      <div class="feld">
+        <label class="titel" for="uz-ziel">Wohin geht die Reise?</label>
+        <input type="text" id="uz-ziel" placeholder="z. B. Gardasee">
+      </div>
+      <div class="feld">
+        <label class="titel">Wann geht es los?</label>
+        <div class="zeitzeile">
+          <input type="date" id="uz-datum" value="${datum}">
+          <input type="time" id="uz-zeit" value="08:00">
+        </div>
+      </div>
+      <div class="feld">
+        <label class="titel">Erinnerungen an diese Geräte</label>
+        ${liste(geraete, "geraete",
+          "Keine Geräte mit der Home-Assistant-App gefunden.")}
+      </div>
+      <div class="dialog-knoepfe">
+        <button class="knopf leise" type="button" data-abbrechen>Abbrechen</button>
+        <button class="knopf" type="button" data-speichern>Anlegen</button>
+      </div>
+    `;
+    this._dialogEl
+      .querySelector("[data-abbrechen]")
+      .addEventListener("click", () => this._dialogSchliessen());
+    this._dialogEl
+      .querySelector("[data-speichern]")
+      .addEventListener("click", () => this._speichern());
+    this._huelleEl.hidden = false;
+    this._dialogEl.querySelector("#uz-ziel").focus();
+  }
+
+  _dialogSchliessen() {
+    this._huelleEl.hidden = true;
+    this._dialogEl.innerHTML = "";
+  }
+
+  _fehlerZeigen(text) {
+    const el = this._dialogEl.querySelector(".fehler");
+    el.textContent = text;
+    el.hidden = false;
+  }
+
+  async _speichern() {
+    const gewaehlt = (name) =>
+      [...this._dialogEl.querySelectorAll(`input[name="${name}"]:checked`)].map(
+        (e) => e.value,
+      );
+
+    const teilnehmer = gewaehlt("teilnehmer");
+    const ziel = this._dialogEl.querySelector("#uz-ziel").value.trim();
+    const datum = this._dialogEl.querySelector("#uz-datum").value;
+    const zeit = this._dialogEl.querySelector("#uz-zeit").value;
+
+    if (!teilnehmer.length) {
+      return this._fehlerZeigen("Bitte auswählen, wer in den Urlaub fährt.");
+    }
+    if (!ziel) return this._fehlerZeigen("Bitte ein Reiseziel eintragen.");
+    if (!datum || !zeit) {
+      return this._fehlerZeigen("Bitte Datum und Uhrzeit angeben.");
+    }
+    if (new Date(`${datum}T${zeit}`) <= new Date()) {
+      return this._fehlerZeigen("Der Reisebeginn muss in der Zukunft liegen.");
+    }
+
+    const knopf = this._dialogEl.querySelector("[data-speichern]");
+    knopf.disabled = true;
+    knopf.textContent = "Wird angelegt …";
+
+    const namen = teilnehmer.map(
+      (id) => this._hass.states[id]?.attributes?.anzeigename ?? id,
+    );
+    const automatisierungsId = String(Date.now());
+    try {
+      await this._hass.callApi(
+        "POST",
+        `config/automation/config/${automatisierungsId}`,
+        {
+          alias: `Urlaub ${namen.join(", ")} – ${ziel}`,
+          description: "Angelegt über die Urlaubszähler-Karte",
+          use_blueprint: {
+            path: this._config.blueprint_path,
+            input: {
+              teilnehmer,
+              ziel,
+              start: `${datum} ${zeit}:00`,
+              mobilgeraete: gewaehlt("geraete"),
+            },
+          },
+        },
+      );
+      await this._sofortAusfuehren(automatisierungsId);
+      this._dialogSchliessen();
+    } catch (fehler) {
+      knopf.disabled = false;
+      knopf.textContent = "Anlegen";
+      this._fehlerZeigen(
+        `Konnte nicht angelegt werden: ${fehler?.body?.message || fehler?.message || fehler}`,
+      );
+    }
+  }
+
+  /**
+   * Die frisch gespeicherte Automatisierung einmal anstoßen.
+   *
+   * Home Assistant feuert 'automation_reloaded', bevor die Trigger der neuen
+   * Automatisierung hängen - ohne diesen Anstoß erschiene der Sensor erst beim
+   * nächsten Neuladen.
+   */
+  async _sofortAusfuehren(automatisierungsId) {
+    for (let versuch = 0; versuch < 12; versuch++) {
+      await new Promise((weiter) => setTimeout(weiter, 400));
+      const treffer = Object.values(this._hass.states).find(
+        (z) =>
+          z.entity_id.startsWith("automation.") &&
+          z.attributes?.id === automatisierungsId,
+      );
+      if (!treffer) continue;
+      await this._hass.callService("automation", "trigger", {
+        entity_id: treffer.entity_id,
+        skip_condition: true,
+      });
+      return true;
+    }
+    return false;
+  }
+
   _countdownAktualisieren() {
     if (!this._listenEl) return;
     const jetzt = Date.now();
@@ -623,6 +961,7 @@ const EDITOR_SCHEMA = [
     selector: { number: { min: 120, max: 600, step: 10, mode: "slider" } },
   },
   { name: "max", selector: { number: { min: 0, max: 25, mode: "box" } } },
+  { name: "show_add", selector: { boolean: {} } },
 ];
 
 const EDITOR_TEXTE = {
@@ -630,11 +969,15 @@ const EDITOR_TEXTE = {
   show_map: "Weltkarte anzeigen",
   map_height: "Höhe der Karte (Pixel)",
   max: "Höchstzahl angezeigter Urlaube (0 = alle)",
+  show_add: "Knopf zum Anlegen eines Urlaubs zeigen",
 };
 
 class UrlaubszaehlerCardEditor extends HTMLElement {
   setConfig(config) {
-    this._config = { title: "Urlaubszähler", show_map: true, map_height: 260, max: 0, ...config };
+    this._config = {
+      title: "Urlaubszähler", show_map: true, map_height: 260, max: 0,
+      show_add: true, ...config,
+    };
     this._rendern();
   }
 

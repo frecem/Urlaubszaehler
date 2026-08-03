@@ -319,3 +319,65 @@ async def test_eigene_vorlaufzeiten(
     await hass.async_block_till_done()
 
     assert benachrichtigungen == []
+
+
+async def test_manueller_start_legt_urlaub_an(
+    hass, eingerichtet, blueprint_installiert, handy
+):
+    """Ein manuelles "Ausführen" legt den Urlaub an.
+
+    Diesen Weg nutzt die Lovelace-Karte: Home Assistant feuert
+    'automation_reloaded', bevor die Trigger einer frisch gespeicherten
+    Automatisierung hängen - sie verpasst also ihr eigenes Ereignis.
+    """
+    await automatisierung_bauen(
+        hass,
+        {
+            "teilnehmer": [PAPA],
+            "ziel": "Gardasee",
+            "start": in_tagen(25),
+            "mobilgeraete": [handy],
+        },
+    )
+    # Bewusst KEIN 'automation_reloaded'.
+    assert hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee") is None
+
+    automatisierungen = [z.entity_id for z in hass.states.async_all("automation")]
+    assert automatisierungen, "keine Automatisierung angelegt"
+    await hass.services.async_call(
+        "automation",
+        "trigger",
+        {"entity_id": automatisierungen[0], "skip_condition": True},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand is not None
+    assert zustand.attributes["ziel"] == "Gardasee"
+
+
+async def test_erinnerung_frischt_urlaub_auf(
+    hass, eingerichtet, blueprint_installiert, handy, freezer
+):
+    """Auch der tägliche Lauf hält den Sensor am Leben (Selbstheilung)."""
+    jetzt = dt_util.now().replace(hour=8, minute=59, second=0, microsecond=0)
+    freezer.move_to(jetzt)
+
+    await automatisierung_bauen(
+        hass,
+        {
+            "teilnehmer": [PAPA],
+            "ziel": "Gardasee",
+            "start": in_tagen(33, "18:00:00"),
+            "mobilgeraete": [handy],
+            "erinnerungszeit": "09:00:00",
+        },
+    )
+
+    freezer.move_to(jetzt + timedelta(minutes=1))
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+    await hass.async_block_till_done()
+
+    # 33 Tage ist keine Vorlaufzeit - der Sensor entsteht trotzdem.
+    assert hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee") is not None

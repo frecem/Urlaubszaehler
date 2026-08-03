@@ -95,6 +95,25 @@ Auswahl auf. Alle Entitäten hängen an einem gemeinsamen Gerät:
 
 ## 3. Einen Urlaub anlegen
 
+### Aus der Karte heraus (am schnellsten)
+
+Die Karte hat unten den Knopf **„＋ Urlaub anlegen"**. Er öffnet ein Fenster mit
+Wer / Wohin / Wann und den Mobilgeräten für die Erinnerungen:
+
+<p align="center">
+  <img src="docs/bilder/09-urlaub-anlegen.png" width="70%" alt="Dialog zum Anlegen eines Urlaubs">
+</p>
+
+Beim Speichern legt die Karte im Hintergrund eine ganz normale Automatisierung
+aus dem Blueprint an – mit Countdown-Sensor **und** allen Push-Erinnerungen. Du
+findest sie danach unter *Einstellungen → Automatisierungen* und kannst sie dort
+weiter anpassen.
+
+Der Knopf erscheint nur für Administratoren (nur die dürfen Automatisierungen
+anlegen) und lässt sich über die Option `show_add: false` ausblenden.
+
+### Über den Blueprint
+
 **Einstellungen → Automatisierungen & Szenen → Blueprints** →
 *Urlaubszähler – Urlaub anlegen & erinnern* anklicken.
 
@@ -167,6 +186,7 @@ und angemeldet. Dashboard bearbeiten → **Karte hinzufügen** → „Urlaubszä
 | `show_map` | `true` | Weltkarte anzeigen |
 | `map_height` | `260` | Höhe der Karte in Pixeln |
 | `max` | `0` | Höchstzahl angezeigter Urlaube (`0` = alle) |
+| `show_add` | `true` | Knopf „＋ Urlaub anlegen" unten in der Karte |
 | `entities` | – | Feste Sensor-Auswahl statt automatischer Erkennung |
 
 ```yaml

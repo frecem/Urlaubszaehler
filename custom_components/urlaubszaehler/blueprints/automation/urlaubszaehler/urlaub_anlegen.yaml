@@ -163,41 +163,10 @@ trigger:
 condition: []
 
 action:
+  # ------------------------------------------------------------------------
+  # 1) Push-Benachrichtigung zu den gewählten Vorlaufzeiten
+  # ------------------------------------------------------------------------
   - choose:
-      # ----------------------------------------------------------------
-      # Urlaub im Urlaubszähler anlegen bzw. aktualisieren
-      # ----------------------------------------------------------------
-      # Variante mit selbst gesetzten Zielkoordinaten
-      - conditions:
-          - condition: trigger
-            id: anlegen
-          - condition: template
-            value_template: "{{ tage_bis | int(-999) >= 0 }}"
-          - condition: template
-            value_template: "{{ ziel_manuell }}"
-        sequence:
-          - service: urlaubszaehler.add_vacation
-            data:
-              teilnehmer: "{{ teilnehmer }}"
-              ziel: "{{ ziel }}"
-              start: "{{ start }}"
-              urlaub_id: "{{ urlaub_id }}"
-              koordinaten: "{{ ziel_koordinaten }}"
-
-      # Variante mit automatischer Ortssuche
-      - conditions:
-          - condition: trigger
-            id: anlegen
-          - condition: template
-            value_template: "{{ tage_bis | int(-999) >= 0 }}"
-        sequence:
-          - service: urlaubszaehler.add_vacation
-            data:
-              teilnehmer: "{{ teilnehmer }}"
-              ziel: "{{ ziel }}"
-              start: "{{ start }}"
-              urlaub_id: "{{ urlaub_id }}"
-
       # ----------------------------------------------------------------
       # Push-Benachrichtigung zu den gewählten Vorlaufzeiten
       # ----------------------------------------------------------------
@@ -227,3 +196,35 @@ action:
           # Optionale Zusatzaktion (leer = wird übersprungen).
           - choose: []
             default: !input zusaetzliche_aktion
+
+  # ------------------------------------------------------------------------
+  # 2) Urlaub anlegen bzw. auffrischen
+  # ------------------------------------------------------------------------
+  # Bewusst bei JEDEM Lauf und nicht nur beim 'anlegen'-Trigger: Home Assistant
+  # feuert 'automation_reloaded', bevor die Trigger der frisch gespeicherten
+  # Automatisierung hängen - sie verpasst also ihr eigenes Ereignis. So greift
+  # zusätzlich der Neustart, die tägliche Erinnerung und ein manueller Start
+  # über "Ausführen".
+  - condition: template
+    value_template: "{{ tage_bis | int(-999) >= 0 }}"
+  - choose:
+      # Variante mit selbst gesetzten Zielkoordinaten
+      - conditions:
+          - condition: template
+            value_template: "{{ ziel_manuell }}"
+        sequence:
+          - service: urlaubszaehler.add_vacation
+            data:
+              teilnehmer: "{{ teilnehmer }}"
+              ziel: "{{ ziel }}"
+              start: "{{ start }}"
+              urlaub_id: "{{ urlaub_id }}"
+              koordinaten: "{{ ziel_koordinaten }}"
+    default:
+      # Variante mit automatischer Ortssuche
+      - service: urlaubszaehler.add_vacation
+        data:
+          teilnehmer: "{{ teilnehmer }}"
+          ziel: "{{ ziel }}"
+          start: "{{ start }}"
+          urlaub_id: "{{ urlaub_id }}"
