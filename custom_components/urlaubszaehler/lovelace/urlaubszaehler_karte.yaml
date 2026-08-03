@@ -1,0 +1,83 @@
+# Lovelace-Karten für den Urlaubszähler
+# ---------------------------------------------------------------------------
+# Einfügen über: Dashboard → Bearbeiten → Karte hinzufügen → "Manuell"
+# und dort den Inhalt einer Karte ab "type:" einfügen (ohne den Listenstrich).
+
+# ===========================================================================
+# EMPFOHLEN: die eigene Karte (www/urlaubszaehler-card.js)
+# ---------------------------------------------------------------------------
+# Zeigt automatisch alle geplanten Urlaube und darüber eine Weltkarte mit
+# gestrichelten Reisebögen vom Standort des Servers zu den Zielen.
+# Voraussetzung: Die Datei liegt unter config/www/ und ist unter
+# Einstellungen → Dashboards → Ressourcen als JavaScript-Modul eingetragen
+# (/local/urlaubszaehler-card.js). Danach steht sie auch in der
+# Kartenauswahl unter "Urlaubszähler".
+# ===========================================================================
+
+- type: custom:urlaubszaehler-card
+  title: 🏖️ Urlaubszähler
+  show_map: true
+  map_height: 260
+  # max: 5                       # optional: nur die nächsten 5 Urlaube
+  # entities:                    # optional: feste Auswahl statt Automatik
+  #   - sensor.urlaubszahler_urlaub_papa_und_mama_gardasee
+
+# Nur die Liste, ohne Karte
+- type: custom:urlaubszaehler-card
+  title: Nächste Reisen
+  show_map: false
+  max: 3
+
+# ===========================================================================
+# ALTERNATIVE OHNE INSTALLATION: reine Bordmittel-Karten
+# ---------------------------------------------------------------------------
+# Der Sensor-Status ist der Reisebeginn als Unix-Zeit (Dezimal). Tage, Stunden
+# und Minuten werden hier live daraus abgeleitet – die Anzeige bleibt bei
+# 0/0/0 stehen, sobald der Reisezeitpunkt erreicht ist.
+# ===========================================================================
+
+# Übersicht über alle geplanten Urlaube
+- type: markdown
+  title: 🏖️ Urlaubszähler
+  content: |-
+    {%- set urlaube = states.sensor
+          | selectattr('attributes.urlaub_id', 'defined')
+          | sort(attribute='attributes.start_zeitstempel') | list %}
+    {%- if urlaube | count == 0 %}
+    _Aktuell ist kein Urlaub geplant._
+    {%- endif %}
+    {%- for u in urlaube %}
+    {%- set rest = [ (u.state | float(0)) - as_timestamp(now()), 0 ] | max %}
+    {%- set tage = (rest // 86400) | int %}
+    {%- set stunden = ((rest % 86400) // 3600) | int %}
+    {%- set minuten = ((rest % 3600) // 60) | int %}
+
+    ## {{ u.attributes.wer }} → {{ u.attributes.ziel }}
+
+    # {{ tage }} T · {{ stunden }} Std · {{ minuten }} Min
+
+    Abfahrt: **{{ (u.state | float(0)) | timestamp_custom('%d.%m.%Y, %H:%M') }} Uhr**
+
+    ---
+    {%- endfor %}
+
+# Einzelkarte für genau einen Urlaub (entity_id anpassen)
+- type: markdown
+  content: |-
+    {%- set sensor = 'sensor.urlaubszahler_urlaub_papa_und_mama_gardasee' %}
+    {%- set rest = [ states(sensor) | float(0) - as_timestamp(now()), 0 ] | max %}
+
+    # {{ (rest // 86400) | int }} Tage
+
+    ### {{ ((rest % 86400) // 3600) | int }} Stunden, {{ ((rest % 3600) // 60) | int }} Minuten
+
+    {{ state_attr(sensor, 'nachricht') }}
+
+# Wer hat einen Urlaub geplant? (Entity-IDs anpassen)
+- type: entities
+  title: Reisende
+  entities:
+    - entity: binary_sensor.urlaubszahler_papa
+      secondary_info: last-changed
+    - entity: binary_sensor.urlaubszahler_mama
+    - entity: binary_sensor.urlaubszahler_familie_muster

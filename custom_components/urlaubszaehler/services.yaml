@@ -1,0 +1,90 @@
+add_vacation:
+  name: Urlaub anlegen
+  description: >-
+    Legt einen neuen Urlaubszähler an oder aktualisiert einen bestehenden
+    (gleiche urlaub_id). Für jeden Urlaub entsteht ein eigener Sensor.
+  fields:
+    teilnehmer:
+      name: Wer
+      description: >-
+        Personen und/oder Familien, die in den Urlaub fahren. Entweder die
+        Entitäten des Urlaubszählers oder einfache Namen als Text.
+      required: true
+      example: '["binary_sensor.urlaubszahler_papa", "binary_sensor.urlaubszahler_mama"]'
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: urlaubszaehler
+              domain: binary_sensor
+    ziel:
+      name: Wohin
+      description: Das Reiseziel.
+      required: true
+      example: Gardasee
+      selector:
+        text:
+    start:
+      name: Wann
+      description: >-
+        Datum und Uhrzeit des Reisebeginns. Naive Zeitangaben werden in der in
+        Home Assistant eingestellten Zeitzone (z. B. Europe/Berlin) gelesen.
+      required: true
+      example: "2026-08-14 07:30:00"
+      selector:
+        datetime:
+    koordinaten:
+      name: Zielkoordinaten
+      description: >-
+        Optional. Ohne diese Angabe wird der Ortsname automatisch bei
+        OpenStreetMap nachgeschlagen. Nützlich bei mehrdeutigen Ortsnamen.
+      required: false
+      selector:
+        location:
+    urlaub_id:
+      name: Urlaub-ID
+      description: >-
+        Optionale, feste ID. Ein erneuter Aufruf mit derselben ID aktualisiert
+        den bestehenden Urlaub, statt einen zweiten anzulegen.
+      required: false
+      example: sommerurlaub_2026
+      selector:
+        text:
+    entry_id:
+      name: Config-Entry
+      description: Nur nötig, wenn mehrere Urlaubszähler-Einträge existieren.
+      required: false
+      advanced: true
+      selector:
+        text:
+
+remove_vacation:
+  name: Urlaub entfernen
+  description: Entfernt einen Urlaub und seinen Sensor restlos aus dem System.
+  fields:
+    urlaub_id:
+      name: Urlaub-ID
+      description: Die ID des zu entfernenden Urlaubs.
+      required: true
+      example: sommerurlaub_2026
+      selector:
+        text:
+    entry_id:
+      name: Config-Entry
+      description: Nur nötig, wenn mehrere Urlaubszähler-Einträge existieren.
+      required: false
+      advanced: true
+      selector:
+        text:
+
+list_vacations:
+  name: Urlaube auflisten
+  description: Liefert alle geplanten Urlaube inklusive Restzeit zurück.
+  fields:
+    entry_id:
+      name: Config-Entry
+      description: Nur nötig, wenn mehrere Urlaubszähler-Einträge existieren.
+      required: false
+      advanced: true
+      selector:
+        text:

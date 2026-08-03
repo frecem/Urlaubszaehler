@@ -1,0 +1,114 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Urlaubszähler einrichten",
+        "description": "Wie viele Personen und Familien sollen verwaltet werden? Im nächsten Schritt werden die Namen abgefragt.",
+        "data": {
+          "anzahl_personen": "Wie viele Personen gibt es?",
+          "anzahl_familien": "Wie viele Familien gibt es?"
+        }
+      },
+      "personen": {
+        "title": "Namen der Personen",
+        "description": "Trage die Namen ein, z. B. Papa, Fiene, Mama."
+      },
+      "familien": {
+        "title": "Namen der Familien",
+        "description": "Trage die Familiennamen ein. Optional kannst du festlegen, welche Personen zu einer Familie gehören."
+      }
+    },
+    "error": {
+      "keine_namen": "Bitte mindestens einen Namen eintragen."
+    },
+    "abort": {
+      "single_instance_allowed": "Der Urlaubszähler ist bereits eingerichtet. Personen und Familien lassen sich über 'Konfigurieren' anpassen."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Urlaubszähler verwalten",
+        "menu_options": {
+          "namen": "Personen und Familien bearbeiten",
+          "urlaube": "Geplante Urlaube entfernen"
+        }
+      },
+      "namen": {
+        "title": "Anzahl anpassen",
+        "data": {
+          "anzahl_personen": "Wie viele Personen gibt es?",
+          "anzahl_familien": "Wie viele Familien gibt es?"
+        }
+      },
+      "namen_personen": {
+        "title": "Namen der Personen"
+      },
+      "namen_familien": {
+        "title": "Namen der Familien"
+      },
+      "urlaube": {
+        "title": "Urlaube entfernen",
+        "description": "Wähle die Urlaube aus, die sofort gelöscht werden sollen. Abgelaufene Urlaube verschwinden ohnehin automatisch 24 Stunden nach dem Reisebeginn.",
+        "data": {
+          "loeschen": "Zu löschende Urlaube"
+        }
+      }
+    },
+    "error": {
+      "keine_namen": "Bitte mindestens einen Namen eintragen."
+    },
+    "abort": {
+      "keine_urlaube": "Es sind aktuell keine Urlaube geplant."
+    }
+  },
+  "services": {
+    "add_vacation": {
+      "name": "Urlaub anlegen",
+      "description": "Legt einen neuen Urlaubszähler an oder aktualisiert einen bestehenden.",
+      "fields": {
+        "teilnehmer": {
+          "name": "Wer",
+          "description": "Personen und/oder Familien, die in den Urlaub fahren."
+        },
+        "ziel": { "name": "Wohin", "description": "Das Reiseziel." },
+        "start": {
+          "name": "Wann",
+          "description": "Datum und Uhrzeit des Reisebeginns."
+        },
+        "urlaub_id": {
+          "name": "Urlaub-ID",
+          "description": "Optionale feste ID zum Aktualisieren statt Neuanlegen."
+        },
+        "entry_id": {
+          "name": "Config-Entry",
+          "description": "Nur nötig bei mehreren Urlaubszähler-Einträgen."
+        }
+      }
+    },
+    "remove_vacation": {
+      "name": "Urlaub entfernen",
+      "description": "Entfernt einen Urlaub und seinen Sensor restlos.",
+      "fields": {
+        "urlaub_id": {
+          "name": "Urlaub-ID",
+          "description": "Die ID des zu entfernenden Urlaubs."
+        },
+        "entry_id": {
+          "name": "Config-Entry",
+          "description": "Nur nötig bei mehreren Urlaubszähler-Einträgen."
+        }
+      }
+    },
+    "list_vacations": {
+      "name": "Urlaube auflisten",
+      "description": "Liefert alle geplanten Urlaube inklusive Restzeit zurück.",
+      "fields": {
+        "entry_id": {
+          "name": "Config-Entry",
+          "description": "Nur nötig bei mehreren Urlaubszähler-Einträgen."
+        }
+      }
+    }
+  }
+}

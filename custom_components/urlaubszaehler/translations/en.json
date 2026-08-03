@@ -1,0 +1,108 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up holiday counter",
+        "description": "How many people and families should be managed? The names are asked for in the next step.",
+        "data": {
+          "anzahl_personen": "How many people are there?",
+          "anzahl_familien": "How many families are there?"
+        }
+      },
+      "personen": {
+        "title": "Names of the people",
+        "description": "Enter the names, e.g. Papa, Fiene, Mama."
+      },
+      "familien": {
+        "title": "Names of the families",
+        "description": "Enter the family names. Optionally define which people belong to a family."
+      }
+    },
+    "error": {
+      "keine_namen": "Please enter at least one name."
+    },
+    "abort": {
+      "single_instance_allowed": "The holiday counter is already set up. People and families can be changed via 'Configure'."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manage holiday counter",
+        "menu_options": {
+          "namen": "Edit people and families",
+          "urlaube": "Remove planned holidays"
+        }
+      },
+      "namen": {
+        "title": "Adjust the numbers",
+        "data": {
+          "anzahl_personen": "How many people are there?",
+          "anzahl_familien": "How many families are there?"
+        }
+      },
+      "namen_personen": { "title": "Names of the people" },
+      "namen_familien": { "title": "Names of the families" },
+      "urlaube": {
+        "title": "Remove holidays",
+        "description": "Select the holidays to delete right away. Expired holidays are removed automatically 24 hours after departure anyway.",
+        "data": { "loeschen": "Holidays to delete" }
+      }
+    },
+    "error": {
+      "keine_namen": "Please enter at least one name."
+    },
+    "abort": {
+      "keine_urlaube": "There are currently no planned holidays."
+    }
+  },
+  "services": {
+    "add_vacation": {
+      "name": "Add holiday",
+      "description": "Creates a new holiday counter or updates an existing one.",
+      "fields": {
+        "teilnehmer": {
+          "name": "Who",
+          "description": "People and/or families going on holiday."
+        },
+        "ziel": { "name": "Where", "description": "The destination." },
+        "start": {
+          "name": "When",
+          "description": "Date and time of departure."
+        },
+        "urlaub_id": {
+          "name": "Holiday ID",
+          "description": "Optional fixed ID to update instead of creating a new entry."
+        },
+        "entry_id": {
+          "name": "Config entry",
+          "description": "Only needed with multiple holiday counter entries."
+        }
+      }
+    },
+    "remove_vacation": {
+      "name": "Remove holiday",
+      "description": "Removes a holiday and its sensor completely.",
+      "fields": {
+        "urlaub_id": {
+          "name": "Holiday ID",
+          "description": "ID of the holiday to remove."
+        },
+        "entry_id": {
+          "name": "Config entry",
+          "description": "Only needed with multiple holiday counter entries."
+        }
+      }
+    },
+    "list_vacations": {
+      "name": "List holidays",
+      "description": "Returns all planned holidays including the remaining time.",
+      "fields": {
+        "entry_id": {
+          "name": "Config entry",
+          "description": "Only needed with multiple holiday counter entries."
+        }
+      }
+    }
+  }
+}
