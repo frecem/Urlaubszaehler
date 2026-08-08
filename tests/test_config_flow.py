@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import pathlib
 from datetime import datetime, timedelta
 
 import pytest
@@ -16,6 +18,22 @@ from custom_components.urlaubszaehler.const import (
     CONF_PERSONEN,
     DOMAIN,
 )
+
+PAKET = pathlib.Path("custom_components/urlaubszaehler")
+
+
+def test_beispielnamen_sind_keine_echten_namen():
+    """Der Platzhaltertext im Einrichtungsdialog darf keinen echten Namen
+    zeigen ('Fiene' hatte sich hier eingeschlichen und war bei jeder
+    Installation im Klartext sichtbar)."""
+    for datei in (
+        PAKET / "strings.json",
+        PAKET / "translations" / "de.json",
+        PAKET / "translations" / "en.json",
+    ):
+        inhalt = json.loads(datei.read_text())
+        beschreibung = inhalt["config"]["step"]["personen"]["description"]
+        assert "Fiene" not in beschreibung, f"{datei}: {beschreibung!r}"
 
 
 async def test_kompletter_ablauf(hass):
