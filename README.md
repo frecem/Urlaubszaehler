@@ -5,8 +5,8 @@ geplanten Urlaub einen eigenen Countdown-Sensor erzeugt, inklusive Blueprint zum
 Anlegen neuer Urlaube und für Push-Benachrichtigungen zu festen Vorlaufzeiten.
 
 <p align="center">
-  <img src="docs/bilder/06-karte-hell.png" width="49%" alt="Urlaubszähler-Karte im hellen Design">
-  <img src="docs/bilder/07-karte-dunkel.png" width="49%" alt="Urlaubszähler-Karte im dunklen Design">
+  <img src="https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/bilder/06-karte-hell.png" width="49%" alt="Urlaubszähler-Karte im hellen Design">
+  <img src="https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/bilder/07-karte-dunkel.png" width="49%" alt="Urlaubszähler-Karte im dunklen Design">
 </p>
 
 *Alle Bilder sind echte Aufnahmen aus einer laufenden Home-Assistant-Instanz
@@ -24,11 +24,29 @@ Beispieldaten – siehe [Datenschutz](#8-datenschutz).*
 
 Mindestversion: **Home Assistant 2024.11**
 
+<details>
+<summary><strong>Was ist neu in 1.0.2?</strong></summary>
+
+* Die Integration liefert jetzt ein eigenes Marken-Icon mit
+  (`custom_components/urlaubszaehler/brand/`), sichtbar unter
+  *Einstellungen → Geräte & Dienste*. Im HACS-Installationsdialog selbst
+  taucht es wegen eines aktuell offenen HACS-Fehlers
+  ([hacs/integration#5223](https://github.com/hacs/integration/issues/5223))
+  noch nicht auf – das liegt an HACS, nicht an dieser Integration, und
+  erledigt sich von selbst, sobald HACS das behebt.
+* Ein Platzhaltername im Einrichtungsdialog („z. B. Papa, Fiene, Mama")
+  wurde entfernt und durch generische Rollenbezeichnungen ersetzt.
+* Alle Bilder in dieser Anleitung werden jetzt über absolute Adressen
+  eingebunden, damit sie auch beim Öffnen des Repositorys direkt aus Home
+  Assistant/HACS heraus korrekt angezeigt werden.
+
+</details>
+
 ---
 
 ## 1. Installation über HACS (empfohlen)
 
-[![Repository zu HACS hinzufügen](docs/badges/hacs.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=frecem&repository=Urlaubszaehler&category=integration)
+[![Repository zu HACS hinzufügen](https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/badges/hacs.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=frecem&repository=Urlaubszaehler&category=integration)
 
 Ein Klick auf den Knopf öffnet HACS direkt bei diesem Repository. Falls der
 Knopf nicht funktioniert (etwa weil „My Home Assistant" nicht eingerichtet ist),
@@ -68,7 +86,7 @@ auch hier nicht nötig – Karte und Blueprint kommen mit.
 
 ## 2. Einrichten
 
-[![Integration hinzufügen](docs/badges/integration.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=urlaubszaehler)
+[![Integration hinzufügen](https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/badges/integration.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=urlaubszaehler)
 
 Oder von Hand: **Einstellungen → Geräte & Dienste → Integration hinzufügen** →
 nach `Urlaubszähler` suchen.
@@ -80,13 +98,13 @@ nach `Urlaubszähler` suchen.
 
 | Schritt 1 | Schritt 2 | Schritt 3 |
 |---|---|---|
-| ![Anzahl](docs/bilder/01-einrichtung-anzahl.png) | ![Personen](docs/bilder/02-einrichtung-personen.png) | ![Familien](docs/bilder/03-einrichtung-familien.png) |
+| ![Anzahl](https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/bilder/01-einrichtung-anzahl.png) | ![Personen](https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/bilder/02-einrichtung-personen.png) | ![Familien](https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/bilder/03-einrichtung-familien.png) |
 
 Danach existiert je Person und Familie eine Entität, z. B.
 `binary_sensor.urlaubszahler_papa` – diese Namen tauchen im Blueprint zur
 Auswahl auf. Alle Entitäten hängen an einem gemeinsamen Gerät:
 
-![Geräteseite](docs/bilder/08-geraeteseite.png)
+![Geräteseite](https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/bilder/08-geraeteseite.png)
 
 > Namen später ändern: **Einstellungen → Geräte & Dienste → Urlaubszähler →
 > Konfigurieren**. Dort lassen sich auch geplante Urlaube vorzeitig löschen.
@@ -101,7 +119,7 @@ Die Karte hat unten den Knopf **„＋ Urlaub anlegen"**. Er öffnet ein Fenster
 Wer / Wohin / Wann und den Mobilgeräten für die Erinnerungen:
 
 <p align="center">
-  <img src="docs/bilder/09-urlaub-anlegen.png" width="70%" alt="Dialog zum Anlegen eines Urlaubs">
+  <img src="https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/bilder/09-urlaub-anlegen.png" width="70%" alt="Dialog zum Anlegen eines Urlaubs">
 </p>
 
 Beim Speichern legt die Karte im Hintergrund eine ganz normale Automatisierung
@@ -129,7 +147,7 @@ Taucht der Blueprint nicht sofort auf, einmal über **Entwicklerwerkzeuge → YA
 | **Vorlaufzeiten** | Standard: 60, 40, 20, 10, 5 und 1 Tag vorher |
 | **Uhrzeit der Erinnerung** | Standard: 09:00 Uhr |
 
-![Blueprint-Formular](docs/bilder/04-blueprint.png)
+![Blueprint-Formular](https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/bilder/04-blueprint.png)
 
 Beim **Speichern** der Automatisierung wird der Sensor sofort erzeugt. Für jeden
 weiteren Urlaub legst du einfach eine weitere Automatisierung aus demselben
@@ -196,7 +214,7 @@ show_map: true
 map_height: 260
 ```
 
-![Dashboard mit der Karte](docs/bilder/05-dashboard-hell.png)
+![Dashboard mit der Karte](https://raw.githubusercontent.com/frecem/Urlaubszaehler/main/docs/bilder/05-dashboard-hell.png)
 
 Ein Klick auf eine Zeile öffnet die Detailansicht des jeweiligen Sensors.
 Reiseziele ohne Koordinaten erscheinen in der Liste mit dem Hinweis
