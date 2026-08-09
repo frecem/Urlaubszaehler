@@ -6,6 +6,24 @@ installiert bei Kategorie *Integration* ohnehin nur
 für künftige Versionen gesammelt, bevor sie umgesetzt werden – nichts in
 diesem Dokument ist bereits gebaut.
 
+## Verbindliche Rahmenbedingung für alle Punkte
+
+**Bestandsschutz beim Bearbeiten:** Neue Felder (Transportmittel usw.) müssen
+bei bereits angelegten Urlauben *nachträglich editierbar* sein, ohne den
+Eintrag löschen und neu anlegen zu müssen. Konkret heißt das:
+
+* Neue Felder brauchen einen sinnvollen Default (z. B. Transportmittel
+  "unbekannt"), damit `urlaubszaehler.add_vacation` mit gleicher `urlaub_id`
+  weiterhin auch *ohne* das neue Feld funktioniert (Abwärtskompatibilität für
+  bestehende Automatisierungen).
+* Der neue Blueprint-Input muss beim Bearbeiten einer bestehenden
+  Automatisierung in der UI erscheinen und ausfüllbar sein – nicht nur beim
+  Neuanlegen. Nach dem Speichern greift wie gehabt der bestehende
+  "gleiche `urlaub_id` = Update"-Mechanismus.
+* Genauso beim Karten-Dialog: falls dort eine Bearbeitungsmöglichkeit für
+  bestehende Einträge entsteht (aktuell gibt es nur "Urlaub anlegen"), muss
+  sie auch die neuen Felder abdecken.
+
 ## Geplant für v1.0.5
 
 ### 1. Transportmittel beim Anlegen eines Urlaubs auswählen
