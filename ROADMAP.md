@@ -72,6 +72,66 @@ kein zusätzlicher Netzwerkaufruf.
 Ergänzt die Dauer um eine harte Zahl (aus denselben Koordinaten per
 Haversine), keine neue Abhängigkeit.
 
+## Zu klärende Details vor der Umsetzung
+
+Punkte, die bei der Umsetzung sonst erst spät auffallen. Die Befunde zur
+Karte stammen aus einer Durchsicht von `tools/urlaubszaehler-card.src.js`.
+
+### 1. Zeitzone am Ziel (betrifft Punkt 3)
+Bei Fernreisen ist eine Ankunftszeit in Heimatzeit irreführend: Berlin → New
+York, Abflug 10:00, 8 Std Flug – Ankunft ist nicht 18:00, sondern 12:00
+Ortszeit am Ziel. Genau bei Langstrecken ist die Anzeige am interessantesten.
+
+**Entschieden:** Ortszeit am Reiseziel anzeigen, dafür wird eine Abhängigkeit
+in Kauf genommen (`manifest.json` → `requirements`, bislang leer). Ein Paket
+wie `timezonefinder` liefert aus Koordinaten die IANA-Zeitzone und arbeitet
+dabei **offline** (eigene Grenzdaten, kein Netzwerkaufruf) – die
+Datenschutz-Linie des Projekts bleibt damit unangetastet. Die eigentliche
+Umrechnung übernimmt `zoneinfo` aus der Standardbibliothek.
+
+### 2. Auto und Bahn zu Zielen über Wasser (betrifft Punkt 2)
+Luftlinie × Straßenfaktor kennt keine Fähren: „Mit dem Auto nach Mallorca"
+ergäbe rund 15 Stunden und ignoriert die Überfahrt komplett. Entweder bewusst
+akzeptieren (es geht ausdrücklich um grobe Werte) oder einen dezenten Hinweis
+zeigen, wenn Transportmittel und Route unplausibel wirken.
+
+### 3. Platz auf der Karte (betrifft Punkt 2 und 5)
+Die Beschriftungen sind heute nur der Zielname bei 11 px. Die
+Kollisionsvermeidung rechnet mit Kästchen von etwa 80 × 13 px und maximal
+sechs Ausweichversuchen nach unten; ob ein Label links oder rechts vom Punkt
+steht, hängt an einer festen Schwelle bei 72 % der Kartenbreite. Ein Label wie
+„Gardasee · ca. 8 Std · 780 km" ist rund dreimal so breit und sprengt beide
+Heuristiken, besonders auf Handybreite.
+
+**Empfehlung:** Dauer und Entfernung in die Liste unter der Karte setzen,
+nicht an den Bogen.
+
+### 4. Platz in der Listenzeile (betrifft Punkt 2 und 5)
+Jede Zeile ist ein festes Raster (`punkt | ziel | count` /
+`punkt | wer | ab`), unter 460 px Breite auf zwei Spalten gestapelt. Für Dauer
+und Entfernung ist keine Zelle frei – eine dritte Rasterzeile oder eine
+Zusammenlegung sollte vorab festgelegt werden, inklusive der gestapelten
+Ansicht.
+
+### 5. Fehlende Koordinaten (betrifft Punkt 2 und 5)
+Antwortet Nominatim gerade nicht, steht in der Liste schon heute „Ort nicht
+gefunden" (`ohneOrt`). Ohne Koordinaten gibt es auch keine Entfernung und
+keine Dauer – dieser Fall braucht dieselbe saubere Behandlung, sonst erscheint
+„0 km, ca. 0 Std".
+
+### 6. Bearbeiten direkt aus der Karte
+Ergänzt die verbindliche Rahmenbedingung oben um den eigentlichen
+Komfortgewinn: Ein Klick auf eine Zeile öffnet heute nur die Detailansicht
+(`hass-more-info`); bearbeiten geht ausschließlich über Einstellungen →
+Automatisierungen. Der vorhandene Anlege-Dialog ließe sich vorbefüllt zum
+Bearbeiten wiederverwenden.
+
+### 7. Offener Desktop-Zentrierungsfehler
+Vom Nutzer gemeldet („im Desktop-Modus sieht die Karte verschoben aus"), aber
+nie reproduziert: Eine Messung bei 1920 px ergab in Sections, Masonry und
+Panel jeweils eine exakt zentrierte Karte. Screenshot und View-YAML stehen
+noch aus. Sollte geklärt werden, bevor 1.0.5 weitere Anzeigen dazupackt.
+
 ## Geprüft und bewusst nicht verfolgt
 
 Damit diese Ideen nicht in einer künftigen Runde erneut vorgeschlagen werden:
