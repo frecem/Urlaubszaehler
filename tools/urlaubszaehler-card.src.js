@@ -430,7 +430,8 @@ class UrlaubszaehlerCard extends HTMLElement {
         }
         .feld input[type="text"],
         .feld input[type="date"],
-        .feld input[type="time"] {
+        .feld input[type="time"],
+        .feld select {
           width: 100%;
           box-sizing: border-box;
           padding: 10px;
@@ -805,6 +806,16 @@ class UrlaubszaehlerCard extends HTMLElement {
         </div>
       </div>
       <div class="feld">
+        <label class="titel" for="uz-transportmittel">Womit geht die Reise? (optional)</label>
+        <select id="uz-transportmittel">
+          <option value="unbekannt">Unbekannt</option>
+          <option value="flugzeug">✈️ Flugzeug</option>
+          <option value="auto">🚗 Auto</option>
+          <option value="bahn">🚆 Bahn</option>
+          <option value="schiff">🚢 Schiff</option>
+        </select>
+      </div>
+      <div class="feld">
         <label class="titel">Erinnerungen an diese Geräte</label>
         ${liste(geraete, "geraete",
           "Keine Geräte mit der Home-Assistant-App gefunden.")}
@@ -845,6 +856,8 @@ class UrlaubszaehlerCard extends HTMLElement {
     const ziel = this._dialogEl.querySelector("#uz-ziel").value.trim();
     const datum = this._dialogEl.querySelector("#uz-datum").value;
     const zeit = this._dialogEl.querySelector("#uz-zeit").value;
+    const transportmittel =
+      this._dialogEl.querySelector("#uz-transportmittel").value;
 
     if (!teilnehmer.length) {
       return this._fehlerZeigen("Bitte auswählen, wer in den Urlaub fährt.");
@@ -878,6 +891,7 @@ class UrlaubszaehlerCard extends HTMLElement {
               teilnehmer,
               ziel,
               start: `${datum} ${zeit}:00`,
+              transportmittel,
               mobilgeraete: gewaehlt("geraete"),
             },
           },

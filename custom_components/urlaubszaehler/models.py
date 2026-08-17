@@ -8,7 +8,7 @@ from typing import Any
 
 from homeassistant.util import dt as dt_util
 
-from .const import AUTO_DELETE_AFTER
+from .const import AUTO_DELETE_AFTER, TRANSPORTMITTEL_STANDARD
 
 
 def format_namen(namen: list[str]) -> str:
@@ -68,6 +68,7 @@ class Vacation:
     laengengrad: float | None = None
     koordinaten_quelle: str | None = None
     gefunden_als: str | None = None
+    transportmittel: str = TRANSPORTMITTEL_STANDARD
 
     def __post_init__(self) -> None:
         self.start = to_local(self.start)
@@ -142,6 +143,7 @@ class Vacation:
             "laengengrad": self.laengengrad,
             "koordinaten_quelle": self.koordinaten_quelle,
             "gefunden_als": self.gefunden_als,
+            "transportmittel": self.transportmittel,
         }
 
     @classmethod
@@ -161,4 +163,7 @@ class Vacation:
             laengengrad=daten.get("laengengrad"),
             koordinaten_quelle=daten.get("koordinaten_quelle"),
             gefunden_als=daten.get("gefunden_als"),
+            # get() statt [] : ältere, vor 1.0.5 gespeicherte Urlaube kennen
+            # dieses Feld noch nicht und bekommen den Standardwert.
+            transportmittel=daten.get("transportmittel", TRANSPORTMITTEL_STANDARD),
         )

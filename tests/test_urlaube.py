@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import pytest
+import voluptuous as vol
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
@@ -217,6 +218,55 @@ async def test_sensorattribute(hass, eingerichtet):
         attribute["wird_geloescht_zeitstempel"] - attribute["start_zeitstempel"]
         == 86400
     )
+
+
+async def test_transportmittel_standardwert(hass, eingerichtet):
+    """Ohne Angabe gilt 'unbekannt' - das Feld ist optional."""
+    antwort = await anlegen(hass, [PAPA], "Gardasee")
+    assert antwort["transportmittel"] == "unbekannt"
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["transportmittel"] == "unbekannt"
+
+
+async def test_transportmittel_wird_gespeichert(hass, eingerichtet):
+    """Ein angegebenes Transportmittel landet in Antwort, Sensor und Speicher."""
+    antwort = await anlegen(hass, [PAPA], "Gardasee", transportmittel="auto")
+    assert antwort["transportmittel"] == "auto"
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["transportmittel"] == "auto"
+
+    # Übersteht auch einen Neustart (Persistenz über den Store).
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["transportmittel"] == "auto"
+
+
+async def test_transportmittel_ungueltiger_wert_wird_abgelehnt(hass, eingerichtet):
+    """Nur die bekannten Optionen sind erlaubt."""
+    with pytest.raises(vol.Invalid):
+        await anlegen(hass, [PAPA], "Gardasee", transportmittel="rakete")
+
+
+async def test_bestehender_urlaub_ohne_transportmittel_bleibt_nutzbar(
+    hass, eingerichtet
+):
+    """Vor 1.0.5 gespeicherte Urlaube kennen das Feld noch nicht.
+
+    Bestandsschutz: Vacation.from_dict() muss auch ohne den Schlüssel
+    'transportmittel' funktionieren (siehe models.py).
+    """
+    from custom_components.urlaubszaehler.models import Vacation
+
+    alt = {
+        "urlaub_id": "alt_ohne_transportmittel",
+        "namen": ["Papa"],
+        "ziel": "Gardasee",
+        "start": (dt_util.now() + timedelta(days=5)).isoformat(),
+    }
+    urlaub = Vacation.from_dict(alt)
+    assert urlaub.transportmittel == "unbekannt"
 
 
 async def test_countdown_stoppt_bei_null(hass, eingerichtet):

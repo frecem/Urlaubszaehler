@@ -129,6 +129,7 @@ class UrlaubSensor(SensorEntity):
             "arten": self._urlaub.arten,
             "mitglieder": self._urlaub.mitglieder,
             "ziel": self._urlaub.ziel,
+            "transportmittel": self._urlaub.transportmittel,
             # Für die Weltkarte der Lovelace-Karte:
             "breitengrad": self._urlaub.breitengrad,
             "laengengrad": self._urlaub.laengengrad,

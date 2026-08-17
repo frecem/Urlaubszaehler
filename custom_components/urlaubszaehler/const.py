@@ -53,6 +53,18 @@ ATTR_START: Final = "start"
 ATTR_URLAUB_ID: Final = "urlaub_id"
 ATTR_ENTRY_ID: Final = "entry_id"
 ATTR_KOORDINATEN: Final = "koordinaten"
+ATTR_TRANSPORTMITTEL: Final = "transportmittel"
+
+# Transportmittel für die Anreise. "unbekannt" ist bewusst der Standardwert:
+# das Feld ist optional, bestehende Urlaube ohne Angabe bleiben gültig.
+TRANSPORTMITTEL_STANDARD: Final = "unbekannt"
+TRANSPORTMITTEL_OPTIONEN: Final = [
+    "flugzeug",
+    "auto",
+    "bahn",
+    "schiff",
+    TRANSPORTMITTEL_STANDARD,
+]
 
 # Der Sensor verschwindet exakt 24 Stunden nach dem Reisezeitpunkt.
 AUTO_DELETE_AFTER: Final = timedelta(hours=24)

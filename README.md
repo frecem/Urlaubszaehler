@@ -172,6 +172,7 @@ in jeder Lovelace-Karte.
 | `nachricht` | `Der Urlaub von Papa und Mama ist in 12 Tagen, 5 Stunden und 42 Minuten. Die Reise geht nach Gardasee.` |
 | `wer` / `namen` | `Papa und Mama` / `["Papa", "Mama"]` |
 | `ziel` | `Gardasee` |
+| `transportmittel` | `flugzeug`, `auto`, `bahn`, `schiff` oder `unbekannt` (Standard) |
 | `start` / `start_zeitstempel` | `2026-08-14T07:30:00+02:00` / `1786764600.0` |
 | `tage`, `stunden`, `minuten` | `12`, `5`, `42` (stoppen bei `0`) |
 | `verbleibende_sekunden` | `1058520` |
@@ -269,6 +270,7 @@ data:
   ziel: Gardasee
   start: "2026-08-14 07:30:00"
   urlaub_id: sommerurlaub_2026
+  transportmittel: auto  # optional, Standard: unbekannt
 ```
 
 ---

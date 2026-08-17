@@ -25,6 +25,7 @@ from .const import (
     SIGNAL_VACATION_REMOVED,
     STORAGE_VERSION,
     STORE_BLUEPRINT_PRUEFSUMME,
+    TRANSPORTMITTEL_STANDARD,
 )
 from .geocoding import async_geocode
 from .models import Vacation
@@ -189,6 +190,7 @@ class UrlaubszaehlerManager:
         mitglieder: list[str] | None = None,
         breitengrad: float | None = None,
         laengengrad: float | None = None,
+        transportmittel: str = TRANSPORTMITTEL_STANDARD,
     ) -> Vacation:
         """Urlaub anlegen oder - bei gleicher ID - aktualisieren."""
         ort = await self.async_koordinaten(ziel, breitengrad, laengengrad)
@@ -199,6 +201,7 @@ class UrlaubszaehlerManager:
             start=start,
             arten=arten or [],
             mitglieder=mitglieder or [],
+            transportmittel=transportmittel,
             **ort,
         )
         self.vacations[urlaub.urlaub_id] = urlaub

@@ -26,13 +26,22 @@ Eintrag löschen und neu anlegen zu müssen. Konkret heißt das:
 
 ## Geplant für v1.0.5
 
-### 1. Transportmittel beim Anlegen eines Urlaubs auswählen
-Beim Anlegen (Karten-Dialog und/oder Blueprint) auswählen, wie die Anreise
-erfolgt – z. B. Flugzeug, Auto, Bahn, Schiff, jeweils mit passendem Icon.
+### 1. Transportmittel beim Anlegen eines Urlaubs auswählen — erledigt
+Beim Anlegen (Karten-Dialog und Blueprint) auswählbar, wie die Anreise
+erfolgt: Flugzeug, Auto, Bahn, Schiff oder Unbekannt (Standard), jeweils mit
+Icon in Blueprint und Karten-Dialog.
 
-*Betroffene Stellen:* `const.py` (neue `ATTR_`/`CONF_`-Konstante),
-`models.py` (`Vacation`-Feld), `__init__.py` (Service-Schema), Blueprint-YAML
-(neuer Input), Karten-Dialog in `tools/urlaubszaehler-card.src.js`.
+Optional mit Standardwert `unbekannt` umgesetzt (siehe Entscheidung oben):
+`vol.Optional(ATTR_TRANSPORTMITTEL, default="unbekannt")` im Service-Schema,
+`Vacation.transportmittel` mit demselben Default, `Vacation.from_dict()`
+liefert für ältere gespeicherte Urlaube ohne dieses Feld ebenfalls
+`unbekannt` (Bestandsschutz getestet). Fünf neue Tests in
+`test_urlaube.py`/`test_blueprint.py`, komplette Suite (69 Tests) grün.
+
+*Geänderte Stellen:* `const.py`, `models.py`, `manager.py`, `__init__.py`
+(Service-Schema + Antworten), `sensor.py` (Attribut), `services.yaml`,
+Blueprint-YAML (neuer Input, beide `add_vacation`-Aufrufe), Karten-Dialog in
+`tools/urlaubszaehler-card.src.js`, README (Attribut- und Service-Tabelle).
 
 ### 2. Ungefähre Reisedauer auf der Kartenlinie anzeigen
 Auf/neben dem gestrichelten Bogen zum Ziel eine grobe Dauer einblenden (keine
