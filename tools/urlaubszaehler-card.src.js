@@ -392,6 +392,13 @@ class UrlaubszaehlerCard extends HTMLElement {
           stroke-width: 3px;
           stroke-linejoin: round;
         }
+        .transportmittel-icon {
+          font-size: 11px;
+          paint-order: stroke;
+          stroke: var(--card-background-color, var(--ha-card-background, #fff));
+          stroke-width: 3px;
+          stroke-linejoin: round;
+        }
         .fuss { padding: 4px var(--uz-abstand) var(--uz-abstand); }
         .fuss:empty { display: none; }
         .knopf {
@@ -660,6 +667,13 @@ class UrlaubszaehlerCard extends HTMLElement {
         `<circle cx="${zx.toFixed(1)}" cy="${zy.toFixed(1)}" r="4.5" ` +
           `fill="${farbe(index)}" fill-opacity="0.9"/>`,
       );
+      const emoji = TRANSPORTMITTEL_EMOJI[urlaub.transportmittel];
+      if (emoji) {
+        teile.push(
+          `<text class="transportmittel-icon" x="${zx.toFixed(1)}" ` +
+            `y="${(zy - 8).toFixed(1)}" text-anchor="middle">${emoji}</text>`,
+        );
+      }
       if (!beschriftungen.has(urlaub._ziel)) {
         beschriftungen.set(urlaub._ziel, { x: zx, y: zy, text: urlaub.ziel });
       }

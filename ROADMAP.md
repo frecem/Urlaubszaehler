@@ -96,12 +96,18 @@ Ankunftszeit statt der Dauer, sobald das Attribut befüllt ist. 8 neue Tests
 (`test_zielzeit.py` + Integration/Schwellwert in `test_urlaube.py`, inkl.
 `freezer`), komplette Suite (91 Tests) grün.
 
-### 4. Transportmittel-Icons auf der Karte
-Passend zu Punkt 1 – der Bogen bzw. ein kleines Symbol am Zielpunkt sieht je
-nach Transportmittel anders aus (Flugzeug/Auto/Zug/Schiff), rein visuell,
-kein zusätzlicher Netzwerkaufruf. `TRANSPORTMITTEL_EMOJI` in
-`urlaubszaehler-card.src.js` liegt bereits bereit (bisher nur für die Liste
-genutzt, siehe Punkt 2 oben).
+### 4. Transportmittel-Icons auf der Karte — erledigt
+Das bereits vorhandene `TRANSPORTMITTEL_EMOJI`-Mapping (siehe Punkt 2) wird
+jetzt auch am Zielpunkt selbst genutzt: Ein kleines Emoji (✈️🚗🚆🚢) sitzt
+knapp über dem farbigen Punkt jedes Ziels, mit demselben Halo-Effekt
+(`stroke` in Kartenhintergrundfarbe) wie die Ortsnamen, damit es auf jedem
+Hintergrund lesbar bleibt. Bei Transportmittel "unbekannt" bleibt es beim
+bisherigen reinen Punkt, kein Icon. Rein visuell, keine neue Abhängigkeit,
+kein zusätzlicher Netzwerkaufruf – per Playwright-Screenshot geprüft (auch
+herangezoomt, da die Emoji bei Kartengröße recht klein sind).
+
+*Geänderte Stelle:* `tools/urlaubszaehler-card.src.js` (`_karteZeichnen`,
+neue CSS-Klasse `.transportmittel-icon`).
 
 ### 5. Entfernung in km anzeigen — erledigt
 Kam mit Schritt 2/3 mit: `entfernung_km`-Attribut, in der Liste angezeigt.
