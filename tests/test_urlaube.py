@@ -243,6 +243,41 @@ async def test_transportmittel_wird_gespeichert(hass, eingerichtet):
     assert zustand.attributes["transportmittel"] == "auto"
 
 
+async def test_entfernung_und_reisedauer_im_sensor(hass, eingerichtet):
+    """Entfernung ist immer da (sobald Koordinaten bekannt sind), die
+    Reisedauer nur, wenn auch ein Transportmittel angegeben wurde."""
+    await anlegen(hass, [PAPA], "Gardasee", transportmittel="auto")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+
+    # Testinstanz steht in San Diego (pytest-homeassistant-custom-component),
+    # Gardasee liegt auf der anderen Seite des Atlantiks - grobe Plausibilitätsprüfung.
+    assert 8000 < zustand.attributes["entfernung_km"] < 11000
+    assert zustand.attributes["reisedauer_std"] > 0
+    assert zustand.attributes["reisedauer_text"].startswith("ca. ")
+
+
+async def test_reisedauer_ohne_transportmittel_ist_none(hass, eingerichtet):
+    """Ohne Transportmittel (Standard 'unbekannt') gibt es keine Dauer-Schätzung,
+    die Entfernung steht aber trotzdem zur Verfügung."""
+    await anlegen(hass, [PAPA], "Gardasee")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+
+    assert zustand.attributes["entfernung_km"] is not None
+    assert zustand.attributes["reisedauer_std"] is None
+    assert zustand.attributes["reisedauer_text"] is None
+
+
+async def test_reisedauer_ohne_koordinaten_ist_none(hass, eingerichtet):
+    """Ohne bekannte Koordinaten (Ort nicht gefunden) gibt es weder Entfernung
+    noch Reisedauer."""
+    await anlegen(hass, [PAPA], "Fantasialand XYZ", transportmittel="auto")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_fantasialand_xyz")
+
+    assert zustand.attributes["entfernung_km"] is None
+    assert zustand.attributes["reisedauer_std"] is None
+    assert zustand.attributes["reisedauer_text"] is None
+
+
 async def test_transportmittel_ungueltiger_wert_wird_abgelehnt(hass, eingerichtet):
     """Nur die bekannten Optionen sind erlaubt."""
     with pytest.raises(vol.Invalid):

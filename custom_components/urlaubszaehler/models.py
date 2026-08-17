@@ -8,6 +8,7 @@ from typing import Any
 
 from homeassistant.util import dt as dt_util
 
+from . import distanz
 from .const import AUTO_DELETE_AFTER, TRANSPORTMITTEL_STANDARD
 
 
@@ -112,6 +113,34 @@ class Vacation:
         """True, wenn der Urlaub länger als 24 Stunden zurückliegt."""
         jetzt = jetzt or dt_util.utcnow()
         return jetzt.timestamp() >= self.delete_ts
+
+    def entfernung_km(self, heimat_lat: float, heimat_lon: float) -> float | None:
+        """Luftlinienentfernung zum Ziel; None ohne bekannte Koordinaten."""
+        if not self.hat_koordinaten:
+            return None
+        return distanz.entfernung_km(
+            heimat_lat, heimat_lon, self.breitengrad, self.laengengrad
+        )
+
+    def reisedauer_stunden(
+        self, heimat_lat: float, heimat_lon: float
+    ) -> float | None:
+        """Grobe Reisedauer-Schätzung in Stunden.
+
+        None ohne Koordinaten oder bei Transportmittel "unbekannt" - dann
+        fehlt schlicht die Grundlage für eine Schätzung.
+        """
+        entfernung = self.entfernung_km(heimat_lat, heimat_lon)
+        if entfernung is None:
+            return None
+        return distanz.schaetze_dauer_stunden(self.transportmittel, entfernung)
+
+    def reisedauer_text(self, heimat_lat: float, heimat_lon: float) -> str | None:
+        """Menschenlesbare Reisedauer, z. B. 'ca. 8 Std.'."""
+        stunden = self.reisedauer_stunden(heimat_lat, heimat_lon)
+        if stunden is None:
+            return None
+        return distanz.formatiere_dauer(stunden)
 
     def nachricht(self, jetzt: datetime | None = None) -> str:
         """Der vom Nutzer gewünschte Satz."""

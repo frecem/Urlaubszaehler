@@ -43,27 +43,36 @@ liefert für ältere gespeicherte Urlaube ohne dieses Feld ebenfalls
 Blueprint-YAML (neuer Input, beide `add_vacation`-Aufrufe), Karten-Dialog in
 `tools/urlaubszaehler-card.src.js`, README (Attribut- und Service-Tabelle).
 
-### 2. Ungefähre Reisedauer auf der Kartenlinie anzeigen
-Auf/neben dem gestrichelten Bogen zum Ziel eine grobe Dauer einblenden (keine
-exakte Navigation, "Pi mal Daumen").
+### 2. Ungefähre Reisedauer — Berechnung erledigt, Kartenanzeige offen
+Faustformel je Transportmittel steht als eigenes Modul
+`custom_components/urlaubszaehler/distanz.py`: Haversine-Entfernung ×
+Umwegfaktor je Verkehrsmittel, geteilt durch eine angenommene
+Durchschnittsgeschwindigkeit, plus Pauschale für Pausen (Auto: alle 4,5 Std.
+eine 30-Min-Pause) bzw. Vorlauf (Flugzeug: 2 Std.). Deterministisch, kein
+Netzwerkzugriff. Werte wie mit dem Nutzer abgestimmt:
 
-- **Standardweg:** feste Faustformel je Transportmittel – Luftlinienentfernung
-  (Haversine, aus den vorhandenen Koordinaten) × Straßenfaktor je
-  Verkehrsmittel, geteilt durch eine angenommene Durchschnittsgeschwindigkeit,
-  plus Pauschale für Pausen (z. B. Auto: alle ~4,5 Std. eine 30-Min-Pause).
-  Deterministisch, kein Netzwerkzugriff nötig, passt zur bestehenden
-  "möglichst wenig externe Aufrufe"-Linie. Bildet länderspezifisch andere
-  Reisezeiten automatisch über die echte Entfernung ab, ohne eigene
-  Ländertabelle.
-- **Optionale Verfeinerung/Alternative (später, nicht Standard):** Schätzung
-  über den vorhandenen Ollama/Qwen-3B-vServer des Nutzers erfragen (HA hat
-  eine `ollama`-Integration bzw. lässt sich per REST ansprechen). Käme mit
-  einer zusätzlichen Abhängigkeit von der Erreichbarkeit des vServers und
-  nicht-deterministischen, zu parsenden Antworten – deshalb höchstens
-  optionale Ergänzung, nicht Ersatz für die Faustformel.
+| Transportmittel | Geschwindigkeit | Umwegfaktor | Pausen/Vorlauf |
+|---|---|---|---|
+| Flugzeug | 800 km/h | 1,0 | + 2 Std. Vorlauf |
+| Auto | 90 km/h | ×1,3 | alle 4,5 Std. 30 Min |
+| Bahn | 120 km/h | ×1,2 | keine |
+| Schiff | 35 km/h | ×1,1 | keine |
 
-*Betroffene Stellen:* neue Berechnung in `models.py` (oder eigenes Modul),
-neues Sensor-Attribut, Darstellung in `tools/urlaubszaehler-card.src.js`.
+Fähren o. Ä. bewusst nicht berücksichtigt (siehe „Zu klärende Details" unten,
+Punkt 2 – mit dem Nutzer geklärt: einfach akzeptieren).
+
+Neue Sensor-Attribute: `entfernung_km` (immer vorhanden, sobald Koordinaten
+bekannt sind – unabhängig vom Transportmittel, deckt auch Punkt 5 unten ab),
+`reisedauer_std` und `reisedauer_text` (nur, wenn zusätzlich ein
+Transportmittel bekannt ist). 17 neue Tests (`test_distanz.py` + Integration
+in `test_urlaube.py`), komplette Suite (86 Tests) grün.
+
+**Noch offen:** die eigentliche Anzeige in der Karte (Punkt 3/4 der
+Rahmenbedingungen unten) – laut Klärung in die Liste unter der Karte, nicht
+an den Bogen. Ollama-Anbindung als Alternative bewusst nicht verfolgt.
+
+*Geänderte/neue Stellen:* `distanz.py` (neu), `models.py` (drei neue
+`Vacation`-Methoden), `sensor.py` (drei neue Attribute).
 
 ### 3. Ankunftszeit erst kurz vorher anzeigen
 Weit im Voraus nur die **Reisedauer** zeigen (z. B. "ca. 8 Stunden"), die

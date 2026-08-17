@@ -122,6 +122,9 @@ class UrlaubSensor(SensorEntity):
         """Alle für Karten und Automationen nützlichen Werte."""
         jetzt = dt_util.utcnow()
         rest = self._urlaub.restzeit(jetzt)
+        heimat_lat = self.hass.config.latitude
+        heimat_lon = self.hass.config.longitude
+        entfernung = self._urlaub.entfernung_km(heimat_lat, heimat_lon)
         return {
             "urlaub_id": self._urlaub.urlaub_id,
             "wer": self._urlaub.wer,
@@ -130,6 +133,10 @@ class UrlaubSensor(SensorEntity):
             "mitglieder": self._urlaub.mitglieder,
             "ziel": self._urlaub.ziel,
             "transportmittel": self._urlaub.transportmittel,
+            # Grobe Schätzung, keine echte Routenberechnung - siehe distanz.py.
+            "entfernung_km": round(entfernung) if entfernung is not None else None,
+            "reisedauer_std": self._urlaub.reisedauer_stunden(heimat_lat, heimat_lon),
+            "reisedauer_text": self._urlaub.reisedauer_text(heimat_lat, heimat_lon),
             # Für die Weltkarte der Lovelace-Karte:
             "breitengrad": self._urlaub.breitengrad,
             "laengengrad": self._urlaub.laengengrad,
