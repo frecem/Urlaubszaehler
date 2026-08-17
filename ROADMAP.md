@@ -67,12 +67,22 @@ bekannt sind – unabhängig vom Transportmittel, deckt auch Punkt 5 unten ab),
 Transportmittel bekannt ist). 17 neue Tests (`test_distanz.py` + Integration
 in `test_urlaube.py`), komplette Suite (86 Tests) grün.
 
-**Noch offen:** die eigentliche Anzeige in der Karte (Punkt 3/4 der
-Rahmenbedingungen unten) – laut Klärung in die Liste unter der Karte, nicht
-an den Bogen. Ollama-Anbindung als Alternative bewusst nicht verfolgt.
+**Anzeige in der Liste — ebenfalls erledigt:** dritte Rasterzeile
+(`grid-template-areas`, sowohl Normal- als auch die gestapelte
+460-px-Ansicht) mit einer neuen `.reise`-Zeile pro Eintrag, z. B.
+„🚗 ca. 14 Std. · 780 km" oder nur „2650 km", wenn kein Transportmittel
+bekannt ist. Kein Text an den Bogen der Karte (bewusst, siehe Klärung
+„Platz auf der Karte" unten) – nur der Zielname bleibt dort stehen. Per
+Playwright-Screenshot in Normal- und gestapelter Ansicht optisch geprüft,
+keine Kollisionen. Ollama-Anbindung als Alternative bewusst nicht verfolgt.
+
+Punkt 4 der Roadmap (Icons *auf* dem Kartenbogen/-marker selbst) ist davon
+unabhängig und steht noch aus – die `TRANSPORTMITTEL_EMOJI`-Zuordnung dafür
+liegt bereits zentral in `urlaubszaehler-card.src.js` bereit.
 
 *Geänderte/neue Stellen:* `distanz.py` (neu), `models.py` (drei neue
-`Vacation`-Methoden), `sensor.py` (drei neue Attribute).
+`Vacation`-Methoden), `sensor.py` (drei neue Attribute),
+`tools/urlaubszaehler-card.src.js` (`_urlaubeLesen`, `_listeZeichnen`, CSS).
 
 ### 3. Ankunftszeit erst kurz vorher anzeigen
 Weit im Voraus nur die **Reisedauer** zeigen (z. B. "ca. 8 Stunden"), die

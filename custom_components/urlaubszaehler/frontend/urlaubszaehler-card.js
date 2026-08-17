@@ -165,6 +165,14 @@ function restzeit(zielZeitstempel, jetzt) {
   };
 }
 
+/** Emoji je Transportmittel, konsistent mit Blueprint und Anlege-Dialog. */
+const TRANSPORTMITTEL_EMOJI = {
+  flugzeug: "✈️",
+  auto: "🚗",
+  bahn: "🚆",
+  schiff: "🚢",
+};
+
 function escapeHtml(text) {
   return String(text ?? "").replace(
     /[&<>"']/g,
@@ -276,6 +284,9 @@ class UrlaubszaehlerCard extends HTMLElement {
         wer: a.wer ?? "",
         lat: typeof a.breitengrad === "number" ? a.breitengrad : null,
         lon: typeof a.laengengrad === "number" ? a.laengengrad : null,
+        transportmittel: a.transportmittel ?? "unbekannt",
+        entfernungKm: typeof a.entfernung_km === "number" ? a.entfernung_km : null,
+        reisedauerText: typeof a.reisedauer_text === "string" ? a.reisedauer_text : null,
       });
     }
 
@@ -316,8 +327,9 @@ class UrlaubszaehlerCard extends HTMLElement {
           grid-template-columns: 10px 1fr auto;
           grid-template-areas:
             "punkt ziel  count"
-            "punkt wer   ab";
-          gap: 0 12px;
+            "punkt wer   ab"
+            "punkt reise reise";
+          gap: 2px 12px;
           align-items: center;
           padding: 10px var(--uz-abstand);
           cursor: pointer;
@@ -361,6 +373,11 @@ class UrlaubszaehlerCard extends HTMLElement {
           text-align: right;
           font-size: 0.8em;
           color: var(--warning-color, #ffa726);
+        }
+        .reise {
+          grid-area: reise;
+          font-size: 0.8em;
+          color: var(--secondary-text-color);
         }
         .land { fill: currentColor; fill-opacity: 0.10; stroke: currentColor;
                 stroke-opacity: 0.22; stroke-width: 0.6; }
@@ -482,7 +499,7 @@ class UrlaubszaehlerCard extends HTMLElement {
         @media (max-width: 460px) {
           .zeile {
             grid-template-columns: 10px 1fr;
-            grid-template-areas: "punkt ziel" "punkt wer" ". count" ". ab";
+            grid-template-areas: "punkt ziel" "punkt wer" ". count" ". ab" ". reise";
           }
           .count, .ab, .hinweis { text-align: left; }
         }
@@ -693,6 +710,16 @@ class UrlaubszaehlerCard extends HTMLElement {
     this._listenEl.innerHTML = this._urlaube
       .map((urlaub, index) => {
         const ohneOrt = urlaub.lat === null || urlaub.lon === null;
+        const reiseTeile = [];
+        if (urlaub.reisedauerText) {
+          const emoji = TRANSPORTMITTEL_EMOJI[urlaub.transportmittel];
+          reiseTeile.push(
+            emoji ? `${emoji} ${urlaub.reisedauerText}` : urlaub.reisedauerText,
+          );
+        }
+        if (urlaub.entfernungKm !== null) {
+          reiseTeile.push(`${Math.round(urlaub.entfernungKm)} km`);
+        }
         return `
           <div class="zeile" data-entity="${escapeHtml(urlaub.entity_id)}">
             <span class="punkt" style="background:${farbe(index)}"></span>
@@ -703,6 +730,11 @@ class UrlaubszaehlerCard extends HTMLElement {
               ohneOrt
                 ? `<span class="hinweis">Ort nicht gefunden</span>`
                 : `<span class="ab">${escapeHtml(this._zeitpunkt(urlaub.zeitstempel))}</span>`
+            }
+            ${
+              reiseTeile.length
+                ? `<span class="reise">${escapeHtml(reiseTeile.join(" · "))}</span>`
+                : ""
             }
           </div>`;
       })
