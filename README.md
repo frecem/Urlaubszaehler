@@ -25,9 +25,27 @@ Beispieldaten – siehe [Datenschutz](#8-datenschutz).*
 Mindestversion: **Home Assistant 2024.11**
 
 <details>
-<summary><strong>Was ist neu in 1.0.2?</strong></summary>
+<summary><strong>Was ist neu in 1.0.5?</strong></summary>
 
-* Die Integration liefert jetzt ein eigenes Marken-Icon mit
+* **Transportmittel** beim Anlegen eines Urlaubs auswählbar (Flugzeug, Auto,
+  Bahn, Schiff, optional) – im Blueprint und im Karten-Dialog.
+* Grobe **Reisedauer- und Entfernungsschätzung** anhand des Transportmittels,
+  sichtbar in der Liste unter der Karte (z. B. „🚗 ca. 14 Std. · 780 km").
+* Ab 2 Tagen vor der Abreise zeigt die Karte statt der Dauer die geschätzte
+  **Ankunftszeit** – korrekt in der **Ortszeit am Reiseziel**, nicht in
+  deiner Heimatzeit.
+* **Transportmittel-Icons** in der Liste und direkt auf der Weltkarte am
+  Zielpunkt.
+* Bestehende Urlaube lassen sich jetzt **direkt aus der Karte bearbeiten**
+  (Klick auf einen Eintrag öffnet den vorbefüllten Anlege-Dialog) statt nur
+  über Home Assistants Automatisierungs-Editor.
+* Neue Abhängigkeit `timezonefinder` für die Ortszeit-Berechnung – arbeitet
+  vollständig offline, siehe [Datenschutz](#8-datenschutz).
+
+<details>
+<summary>Was war neu in 1.0.2?</summary>
+
+* Die Integration liefert ein eigenes Marken-Icon mit
   (`custom_components/urlaubszaehler/brand/`), sichtbar unter
   *Einstellungen → Geräte & Dienste*. Im HACS-Installationsdialog selbst
   taucht es wegen eines aktuell offenen HACS-Fehlers
@@ -36,10 +54,11 @@ Mindestversion: **Home Assistant 2024.11**
   erledigt sich von selbst, sobald HACS das behebt.
 * Ein Platzhaltername im Einrichtungsdialog („z. B. Papa, Fiene, Mama")
   wurde entfernt und durch generische Rollenbezeichnungen ersetzt.
-* Alle Bilder in dieser Anleitung werden jetzt über absolute Adressen
-  eingebunden, damit sie auch beim Öffnen des Repositorys direkt aus Home
-  Assistant/HACS heraus korrekt angezeigt werden.
+* Alle Bilder in dieser Anleitung werden über absolute Adressen eingebunden,
+  damit sie auch beim Öffnen des Repositorys direkt aus Home Assistant/HACS
+  heraus korrekt angezeigt werden.
 
+</details>
 </details>
 
 ---
@@ -172,6 +191,7 @@ in jeder Lovelace-Karte.
 | `nachricht` | `Der Urlaub von Papa und Mama ist in 12 Tagen, 5 Stunden und 42 Minuten. Die Reise geht nach Gardasee.` |
 | `wer` / `namen` | `Papa und Mama` / `["Papa", "Mama"]` |
 | `ziel` | `Gardasee` |
+| `transportmittel` | `flugzeug`, `auto`, `bahn`, `schiff` oder `unbekannt` (Standard) |
 | `start` / `start_zeitstempel` | `2026-08-14T07:30:00+02:00` / `1786764600.0` |
 | `tage`, `stunden`, `minuten` | `12`, `5`, `42` (stoppen bei `0`) |
 | `verbleibende_sekunden` | `1058520` |
@@ -181,6 +201,9 @@ in jeder Lovelace-Karte.
 | `breitengrad` / `laengengrad` | `45.65` / `10.65` (für die Karte, sonst `null`) |
 | `koordinaten_quelle` | `geocoding`, `manuell` oder `null` |
 | `gefunden_als` | `Lago di Garda, Italia` |
+| `entfernung_km` | `780` – Luftlinie zum Ziel, sobald der Ort bekannt ist (sonst `null`) |
+| `reisedauer_std` / `reisedauer_text` | `14.0` / `ca. 14 Std.` – grobe Schätzung anhand von `transportmittel`, sonst `null` |
+| `ankunftszeit_text` | `Ankunft ca. 22:15 Uhr Ortszeit` – erst ab 2 Tagen vor der Abreise befüllt, vorher `null` |
 
 ---
 
@@ -269,6 +292,7 @@ data:
   ziel: Gardasee
   start: "2026-08-14 07:30:00"
   urlaub_id: sommerurlaub_2026
+  transportmittel: auto  # optional, Standard: unbekannt
 ```
 
 ---
@@ -322,6 +346,9 @@ keine Ortssuche statt und die Integration arbeitet vollständig offline.
   oder Skripte.
 * Alle Urlaubsdaten liegen ausschließlich in
   `.storage/urlaubszaehler.<entry_id>` auf deinem eigenen Server.
+* Die Ortszeit am Reiseziel (für die Ankunftszeit-Anzeige kurz vor der
+  Abreise) wird mit der Python-Bibliothek `timezonefinder` **lokal**
+  bestimmt – keine Online-Zeitzonen-API, keine zusätzliche Netzwerkanfrage.
 * Push-Nachrichten laufen über die Home-Assistant-App und nehmen den Weg, den
   du dort ohnehin nutzt.
 

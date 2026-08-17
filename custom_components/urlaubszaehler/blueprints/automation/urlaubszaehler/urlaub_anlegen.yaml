@@ -42,6 +42,25 @@ blueprint:
             interpretiert.
           selector:
             datetime:
+        transportmittel:
+          name: Womit geht die Reise? (optional)
+          description: >-
+            Nur für eine grobe Reisedauer-Schätzung. Ohne Angabe bleibt der
+            Urlaub genauso nutzbar, es fehlt dann nur diese Schätzung.
+          default: unbekannt
+          selector:
+            select:
+              options:
+                - label: "✈️ Flugzeug"
+                  value: flugzeug
+                - label: "🚗 Auto"
+                  value: auto
+                - label: "🚆 Bahn"
+                  value: bahn
+                - label: "🚢 Schiff"
+                  value: schiff
+                - label: Unbekannt
+                  value: unbekannt
     zielort:
       name: Zielort auf der Karte (optional)
       icon: mdi:map-marker
@@ -125,6 +144,7 @@ variables:
   teilnehmer: !input teilnehmer
   ziel: !input ziel
   start: !input start
+  transportmittel: !input transportmittel
   vorlaufzeiten: !input vorlaufzeiten
   mobilgeraete: !input mobilgeraete
   ziel_manuell: !input ziel_manuell
@@ -219,6 +239,7 @@ action:
               ziel: "{{ ziel }}"
               start: "{{ start }}"
               urlaub_id: "{{ urlaub_id }}"
+              transportmittel: "{{ transportmittel }}"
               koordinaten: "{{ ziel_koordinaten }}"
     default:
       # Variante mit automatischer Ortssuche
@@ -228,3 +249,4 @@ action:
           ziel: "{{ ziel }}"
           start: "{{ start }}"
           urlaub_id: "{{ urlaub_id }}"
+          transportmittel: "{{ transportmittel }}"

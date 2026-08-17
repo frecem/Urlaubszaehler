@@ -33,6 +33,26 @@ add_vacation:
       example: "2026-08-14 07:30:00"
       selector:
         datetime:
+    transportmittel:
+      name: Transportmittel
+      description: >-
+        Optional, nur für eine grobe Reisedauer-Schätzung. Ohne Angabe gilt
+        "unbekannt".
+      required: false
+      default: unbekannt
+      selector:
+        select:
+          options:
+            - label: "✈️ Flugzeug"
+              value: flugzeug
+            - label: "🚗 Auto"
+              value: auto
+            - label: "🚆 Bahn"
+              value: bahn
+            - label: "🚢 Schiff"
+              value: schiff
+            - label: Unbekannt
+              value: unbekannt
     koordinaten:
       name: Zielkoordinaten
       description: >-

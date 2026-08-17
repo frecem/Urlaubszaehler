@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import pytest
+import voluptuous as vol
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
@@ -217,6 +218,116 @@ async def test_sensorattribute(hass, eingerichtet):
         attribute["wird_geloescht_zeitstempel"] - attribute["start_zeitstempel"]
         == 86400
     )
+
+
+async def test_transportmittel_standardwert(hass, eingerichtet):
+    """Ohne Angabe gilt 'unbekannt' - das Feld ist optional."""
+    antwort = await anlegen(hass, [PAPA], "Gardasee")
+    assert antwort["transportmittel"] == "unbekannt"
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["transportmittel"] == "unbekannt"
+
+
+async def test_transportmittel_wird_gespeichert(hass, eingerichtet):
+    """Ein angegebenes Transportmittel landet in Antwort, Sensor und Speicher."""
+    antwort = await anlegen(hass, [PAPA], "Gardasee", transportmittel="auto")
+    assert antwort["transportmittel"] == "auto"
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["transportmittel"] == "auto"
+
+    # Übersteht auch einen Neustart (Persistenz über den Store).
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["transportmittel"] == "auto"
+
+
+async def test_entfernung_und_reisedauer_im_sensor(hass, eingerichtet):
+    """Entfernung ist immer da (sobald Koordinaten bekannt sind), die
+    Reisedauer nur, wenn auch ein Transportmittel angegeben wurde."""
+    await anlegen(hass, [PAPA], "Gardasee", transportmittel="auto")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+
+    # Testinstanz steht in San Diego (pytest-homeassistant-custom-component),
+    # Gardasee liegt auf der anderen Seite des Atlantiks - grobe Plausibilitätsprüfung.
+    assert 8000 < zustand.attributes["entfernung_km"] < 11000
+    assert zustand.attributes["reisedauer_std"] > 0
+    assert zustand.attributes["reisedauer_text"].startswith("ca. ")
+
+
+async def test_reisedauer_ohne_transportmittel_ist_none(hass, eingerichtet):
+    """Ohne Transportmittel (Standard 'unbekannt') gibt es keine Dauer-Schätzung,
+    die Entfernung steht aber trotzdem zur Verfügung."""
+    await anlegen(hass, [PAPA], "Gardasee")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+
+    assert zustand.attributes["entfernung_km"] is not None
+    assert zustand.attributes["reisedauer_std"] is None
+    assert zustand.attributes["reisedauer_text"] is None
+
+
+async def test_reisedauer_ohne_koordinaten_ist_none(hass, eingerichtet):
+    """Ohne bekannte Koordinaten (Ort nicht gefunden) gibt es weder Entfernung
+    noch Reisedauer."""
+    await anlegen(hass, [PAPA], "Fantasialand XYZ", transportmittel="auto")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_fantasialand_xyz")
+
+    assert zustand.attributes["entfernung_km"] is None
+    assert zustand.attributes["reisedauer_std"] is None
+    assert zustand.attributes["reisedauer_text"] is None
+
+
+async def test_ankunftszeit_erst_kurz_vor_abreise(hass, eingerichtet, freezer):
+    """Weit im Voraus nur die Dauer, die Ankunftsuhrzeit erst kurz vorher."""
+    await anlegen(hass, [PAPA], "Gardasee", tage=12, transportmittel="auto")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["reisedauer_text"] is not None
+    assert zustand.attributes["ankunftszeit_text"] is None
+
+    # Nur noch rund ein Tag bis zur Abreise - jetzt greift die Schwelle.
+    freezer.tick(timedelta(days=11))
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+    await hass.async_block_till_done()
+
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    text = zustand.attributes["ankunftszeit_text"]
+    assert text is not None
+    assert text.startswith("Ankunft ca. ")
+    assert text.endswith("Uhr Ortszeit")
+
+
+async def test_ankunftszeit_ohne_transportmittel_bleibt_none(hass, eingerichtet):
+    """Ohne Transportmittel gibt es auch kurz vor der Abreise keine Uhrzeit."""
+    await anlegen(hass, [PAPA], "Gardasee", tage=1)
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["ankunftszeit_text"] is None
+
+
+async def test_transportmittel_ungueltiger_wert_wird_abgelehnt(hass, eingerichtet):
+    """Nur die bekannten Optionen sind erlaubt."""
+    with pytest.raises(vol.Invalid):
+        await anlegen(hass, [PAPA], "Gardasee", transportmittel="rakete")
+
+
+async def test_bestehender_urlaub_ohne_transportmittel_bleibt_nutzbar(
+    hass, eingerichtet
+):
+    """Vor 1.0.5 gespeicherte Urlaube kennen das Feld noch nicht.
+
+    Bestandsschutz: Vacation.from_dict() muss auch ohne den Schlüssel
+    'transportmittel' funktionieren (siehe models.py).
+    """
+    from custom_components.urlaubszaehler.models import Vacation
+
+    alt = {
+        "urlaub_id": "alt_ohne_transportmittel",
+        "namen": ["Papa"],
+        "ziel": "Gardasee",
+        "start": (dt_util.now() + timedelta(days=5)).isoformat(),
+    }
+    urlaub = Vacation.from_dict(alt)
+    assert urlaub.transportmittel == "unbekannt"
 
 
 async def test_countdown_stoppt_bei_null(hass, eingerichtet):

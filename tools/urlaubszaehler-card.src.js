@@ -11,7 +11,7 @@
  * Kartendaten: Natural Earth (public domain), vereinfacht und delta-kodiert.
  */
 
-const KARTEN_VERSION = "1.0.2";
+const KARTEN_VERSION = "1.0.5";
 
 /** Pfad des mitgelieferten Blueprints im Konfigurationsverzeichnis. */
 const BLUEPRINT_PFAD = "urlaubszaehler/urlaub_anlegen.yaml";
@@ -165,6 +165,14 @@ function restzeit(zielZeitstempel, jetzt) {
   };
 }
 
+/** Emoji je Transportmittel, konsistent mit Blueprint und Anlege-Dialog. */
+const TRANSPORTMITTEL_EMOJI = {
+  flugzeug: "✈️",
+  auto: "🚗",
+  bahn: "🚆",
+  schiff: "🚢",
+};
+
 function escapeHtml(text) {
   return String(text ?? "").replace(
     /[&<>"']/g,
@@ -271,11 +279,17 @@ class UrlaubszaehlerCard extends HTMLElement {
       if (!Number.isFinite(zeitstempel)) continue;
       urlaube.push({
         entity_id: id,
+        urlaubId: a.urlaub_id ?? null,
         zeitstempel,
         ziel: a.ziel ?? "",
         wer: a.wer ?? "",
         lat: typeof a.breitengrad === "number" ? a.breitengrad : null,
         lon: typeof a.laengengrad === "number" ? a.laengengrad : null,
+        transportmittel: a.transportmittel ?? "unbekannt",
+        entfernungKm: typeof a.entfernung_km === "number" ? a.entfernung_km : null,
+        reisedauerText: typeof a.reisedauer_text === "string" ? a.reisedauer_text : null,
+        ankunftszeitText:
+          typeof a.ankunftszeit_text === "string" ? a.ankunftszeit_text : null,
       });
     }
 
@@ -316,8 +330,9 @@ class UrlaubszaehlerCard extends HTMLElement {
           grid-template-columns: 10px 1fr auto;
           grid-template-areas:
             "punkt ziel  count"
-            "punkt wer   ab";
-          gap: 0 12px;
+            "punkt wer   ab"
+            "punkt reise reise";
+          gap: 2px 12px;
           align-items: center;
           padding: 10px var(--uz-abstand);
           cursor: pointer;
@@ -362,12 +377,24 @@ class UrlaubszaehlerCard extends HTMLElement {
           font-size: 0.8em;
           color: var(--warning-color, #ffa726);
         }
+        .reise {
+          grid-area: reise;
+          font-size: 0.8em;
+          color: var(--secondary-text-color);
+        }
         .land { fill: currentColor; fill-opacity: 0.10; stroke: currentColor;
                 stroke-opacity: 0.22; stroke-width: 0.6; }
         .bogen { fill: none; stroke-linecap: round; }
         .beschriftung {
           font-size: 11px;
           fill: var(--primary-text-color);
+          paint-order: stroke;
+          stroke: var(--card-background-color, var(--ha-card-background, #fff));
+          stroke-width: 3px;
+          stroke-linejoin: round;
+        }
+        .transportmittel-icon {
+          font-size: 11px;
           paint-order: stroke;
           stroke: var(--card-background-color, var(--ha-card-background, #fff));
           stroke-width: 3px;
@@ -430,7 +457,8 @@ class UrlaubszaehlerCard extends HTMLElement {
         }
         .feld input[type="text"],
         .feld input[type="date"],
-        .feld input[type="time"] {
+        .feld input[type="time"],
+        .feld select {
           width: 100%;
           box-sizing: border-box;
           padding: 10px;
@@ -481,7 +509,7 @@ class UrlaubszaehlerCard extends HTMLElement {
         @media (max-width: 460px) {
           .zeile {
             grid-template-columns: 10px 1fr;
-            grid-template-areas: "punkt ziel" "punkt wer" ". count" ". ab";
+            grid-template-areas: "punkt ziel" "punkt wer" ". count" ". ab" ". reise";
           }
           .count, .ab, .hinweis { text-align: left; }
         }
@@ -640,6 +668,13 @@ class UrlaubszaehlerCard extends HTMLElement {
         `<circle cx="${zx.toFixed(1)}" cy="${zy.toFixed(1)}" r="4.5" ` +
           `fill="${farbe(index)}" fill-opacity="0.9"/>`,
       );
+      const emoji = TRANSPORTMITTEL_EMOJI[urlaub.transportmittel];
+      if (emoji) {
+        teile.push(
+          `<text class="transportmittel-icon" x="${zx.toFixed(1)}" ` +
+            `y="${(zy - 8).toFixed(1)}" text-anchor="middle">${emoji}</text>`,
+        );
+      }
       if (!beschriftungen.has(urlaub._ziel)) {
         beschriftungen.set(urlaub._ziel, { x: zx, y: zy, text: urlaub.ziel });
       }
@@ -692,6 +727,17 @@ class UrlaubszaehlerCard extends HTMLElement {
     this._listenEl.innerHTML = this._urlaube
       .map((urlaub, index) => {
         const ohneOrt = urlaub.lat === null || urlaub.lon === null;
+        const reiseTeile = [];
+        // Kurz vor der Abreise ersetzt die Ankunftsuhrzeit die Dauer - siehe
+        // ANKUNFTSZEIT_SCHWELLE in models.py.
+        const reiseText = urlaub.ankunftszeitText ?? urlaub.reisedauerText;
+        if (reiseText) {
+          const emoji = TRANSPORTMITTEL_EMOJI[urlaub.transportmittel];
+          reiseTeile.push(emoji ? `${emoji} ${reiseText}` : reiseText);
+        }
+        if (urlaub.entfernungKm !== null) {
+          reiseTeile.push(`${Math.round(urlaub.entfernungKm)} km`);
+        }
         return `
           <div class="zeile" data-entity="${escapeHtml(urlaub.entity_id)}">
             <span class="punkt" style="background:${farbe(index)}"></span>
@@ -703,12 +749,28 @@ class UrlaubszaehlerCard extends HTMLElement {
                 ? `<span class="hinweis">Ort nicht gefunden</span>`
                 : `<span class="ab">${escapeHtml(this._zeitpunkt(urlaub.zeitstempel))}</span>`
             }
+            ${
+              reiseTeile.length
+                ? `<span class="reise">${escapeHtml(reiseTeile.join(" · "))}</span>`
+                : ""
+            }
           </div>`;
       })
       .join("");
 
     this._listenEl.querySelectorAll(".zeile").forEach((zeile) => {
       zeile.addEventListener("click", () => {
+        // Administratoren bearbeiten den Urlaub direkt in der Karte - alle
+        // anderen (können ohnehin keine Automatisierungen ändern) sehen wie
+        // gehabt die normale Detailansicht der Entität.
+        const istAdmin = this._hass?.user?.is_admin !== false;
+        const urlaub = this._urlaube.find(
+          (u) => u.entity_id === zeile.dataset.entity,
+        );
+        if (istAdmin && urlaub) {
+          this._dialogOeffnen(urlaub);
+          return;
+        }
         this.dispatchEvent(
           new CustomEvent("hass-more-info", {
             detail: { entityId: zeile.dataset.entity },
@@ -764,62 +826,137 @@ class UrlaubszaehlerCard extends HTMLElement {
     return this._geraete;
   }
 
-  async _dialogOeffnen() {
+  /**
+   * Die vom Blueprint gespeicherten Eingaben für einen bestehenden Urlaub
+   * laden, um den Dialog damit vorzubefüllen.
+   *
+   * Der Blueprint leitet 'urlaub_id' aus der eigenen entity_id ab
+   * (this.entity_id | replace('automation.', '')) - deshalb funktioniert der
+   * Weg zurück genauso: 'automation.' + urlaubId. Existiert diese
+   * Automatisierung nicht (z. B. weil der Urlaub per Dienst ohne Blueprint
+   * angelegt wurde), gibt es hier nichts zu bearbeiten.
+   */
+  async _bearbeitenLaden(urlaub) {
+    if (!urlaub.urlaubId) return null;
+    const zustand = this._hass.states[`automation.${urlaub.urlaubId}`];
+    const automatisierungsId = zustand?.attributes?.id;
+    if (!automatisierungsId) return null;
+    try {
+      const config = await this._hass.callApi(
+        "GET",
+        `config/automation/config/${automatisierungsId}`,
+      );
+      return { automatisierungsId, input: config?.use_blueprint?.input ?? {} };
+    } catch (fehler) {
+      return null;
+    }
+  }
+
+  /**
+   * Dialog zum Anlegen ODER Bearbeiten eines Urlaubs öffnen.
+   *
+   * Ohne Argument: neuer Urlaub, leeres Formular. Mit einem Eintrag aus
+   * `this._urlaube`: bestehender Urlaub, vorbefüllt aus der zugehörigen
+   * Automatisierung - lässt sich diese nicht finden, fällt der Aufrufer auf
+   * die normale Detailansicht zurück (siehe Klick-Handler in _listeZeichnen).
+   */
+  async _dialogOeffnen(urlaub = null) {
+    const bearbeiten = urlaub ? await this._bearbeitenLaden(urlaub) : null;
+    if (urlaub && !bearbeiten) {
+      this.dispatchEvent(
+        new CustomEvent("hass-more-info", {
+          detail: { entityId: urlaub.entity_id },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      return;
+    }
+    const input = bearbeiten?.input ?? {};
+
     const geraete = await this._geraeteLaden();
     const teilnehmer = this._teilnehmer();
 
-    // Vorschlag: morgen, 08:00 Uhr.
-    const morgen = new Date(Date.now() + 86400000);
-    const datum = morgen.toISOString().slice(0, 10);
+    let datum, zeit;
+    if (input.start) {
+      const [d, t] = String(input.start).split(" ");
+      datum = d;
+      zeit = (t || "08:00:00").slice(0, 5);
+    } else {
+      // Vorschlag für einen neuen Urlaub: morgen, 08:00 Uhr.
+      const morgen = new Date(Date.now() + 86400000);
+      datum = morgen.toISOString().slice(0, 10);
+      zeit = "08:00";
+    }
 
-    const liste = (eintraege, name, leerText) =>
+    const gewaehlteTeilnehmer = new Set(input.teilnehmer ?? []);
+    const gewaehlteGeraete = new Set(input.mobilgeraete ?? []);
+
+    const liste = (eintraege, name, leerText, gewaehlt) =>
       eintraege.length
         ? `<div class="auswahl">${eintraege
             .map(
               (e) =>
                 `<label><input type="checkbox" name="${name}" ` +
-                `value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</label>`,
+                `value="${escapeHtml(e.id)}"${gewaehlt.has(e.id) ? " checked" : ""}>` +
+                `${escapeHtml(e.name)}</label>`,
             )
             .join("")}</div>`
         : `<div class="auswahl leer">${leerText}</div>`;
 
     this._dialogEl.innerHTML = `
-      <h2>Neuen Urlaub anlegen</h2>
+      <h2>${bearbeiten ? "Urlaub bearbeiten" : "Neuen Urlaub anlegen"}</h2>
       <p class="hinweis">Es wird eine Automatisierung aus dem Blueprint
-        erstellt – mit Countdown-Sensor und Push-Erinnerungen.</p>
+        ${bearbeiten ? "aktualisiert" : "erstellt"} – mit Countdown-Sensor und Push-Erinnerungen.</p>
       <div class="fehler" hidden></div>
       <div class="feld">
         <label class="titel">Wer fährt in den Urlaub?</label>
         ${liste(teilnehmer, "teilnehmer",
-          "Keine Personen angelegt – bitte zuerst den Urlaubszähler einrichten.")}
+          "Keine Personen angelegt – bitte zuerst den Urlaubszähler einrichten.",
+          gewaehlteTeilnehmer)}
       </div>
       <div class="feld">
         <label class="titel" for="uz-ziel">Wohin geht die Reise?</label>
-        <input type="text" id="uz-ziel" placeholder="z. B. Gardasee">
+        <input type="text" id="uz-ziel" placeholder="z. B. Gardasee" value="${escapeHtml(input.ziel ?? "")}">
       </div>
       <div class="feld">
         <label class="titel">Wann geht es los?</label>
         <div class="zeitzeile">
           <input type="date" id="uz-datum" value="${datum}">
-          <input type="time" id="uz-zeit" value="08:00">
+          <input type="time" id="uz-zeit" value="${zeit}">
         </div>
+      </div>
+      <div class="feld">
+        <label class="titel" for="uz-transportmittel">Womit geht die Reise? (optional)</label>
+        <select id="uz-transportmittel">
+          <option value="unbekannt">Unbekannt</option>
+          <option value="flugzeug">✈️ Flugzeug</option>
+          <option value="auto">🚗 Auto</option>
+          <option value="bahn">🚆 Bahn</option>
+          <option value="schiff">🚢 Schiff</option>
+        </select>
       </div>
       <div class="feld">
         <label class="titel">Erinnerungen an diese Geräte</label>
         ${liste(geraete, "geraete",
-          "Keine Geräte mit der Home-Assistant-App gefunden.")}
+          "Keine Geräte mit der Home-Assistant-App gefunden.",
+          gewaehlteGeraete)}
       </div>
       <div class="dialog-knoepfe">
         <button class="knopf leise" type="button" data-abbrechen>Abbrechen</button>
-        <button class="knopf" type="button" data-speichern>Anlegen</button>
+        <button class="knopf" type="button" data-speichern>${bearbeiten ? "Speichern" : "Anlegen"}</button>
       </div>
     `;
+    this._dialogEl.querySelector("#uz-transportmittel").value =
+      input.transportmittel ?? "unbekannt";
     this._dialogEl
       .querySelector("[data-abbrechen]")
       .addEventListener("click", () => this._dialogSchliessen());
     this._dialogEl
       .querySelector("[data-speichern]")
-      .addEventListener("click", () => this._speichern());
+      .addEventListener("click", () =>
+        this._speichern(bearbeiten?.automatisierungsId ?? null),
+      );
     this._huelleEl.hidden = false;
     this._dialogEl.querySelector("#uz-ziel").focus();
   }
@@ -835,7 +972,9 @@ class UrlaubszaehlerCard extends HTMLElement {
     el.hidden = false;
   }
 
-  async _speichern() {
+  /** @param {string|null} automatisierungsId Gesetzt beim Bearbeiten, sonst neu. */
+  async _speichern(automatisierungsId = null) {
+    const bearbeiten = Boolean(automatisierungsId);
     const gewaehlt = (name) =>
       [...this._dialogEl.querySelectorAll(`input[name="${name}"]:checked`)].map(
         (e) => e.value,
@@ -845,6 +984,8 @@ class UrlaubszaehlerCard extends HTMLElement {
     const ziel = this._dialogEl.querySelector("#uz-ziel").value.trim();
     const datum = this._dialogEl.querySelector("#uz-datum").value;
     const zeit = this._dialogEl.querySelector("#uz-zeit").value;
+    const transportmittel =
+      this._dialogEl.querySelector("#uz-transportmittel").value;
 
     if (!teilnehmer.length) {
       return this._fehlerZeigen("Bitte auswählen, wer in den Urlaub fährt.");
@@ -859,37 +1000,39 @@ class UrlaubszaehlerCard extends HTMLElement {
 
     const knopf = this._dialogEl.querySelector("[data-speichern]");
     knopf.disabled = true;
-    knopf.textContent = "Wird angelegt …";
+    knopf.textContent = bearbeiten ? "Wird gespeichert …" : "Wird angelegt …";
 
     const namen = teilnehmer.map(
       (id) => this._hass.states[id]?.attributes?.anzeigename ?? id,
     );
-    const automatisierungsId = String(Date.now());
+    // Beim Bearbeiten dieselbe ID weiterverwenden: derselbe Aufruf, den
+    // Home Assistant auch beim Speichern in seinem eigenen Automatisierungs-
+    // Editor macht, aktualisiert den bestehenden Eintrag statt einen zweiten
+    // anzulegen.
+    const id = automatisierungsId ?? String(Date.now());
     try {
-      await this._hass.callApi(
-        "POST",
-        `config/automation/config/${automatisierungsId}`,
-        {
-          alias: `Urlaub ${namen.join(", ")} – ${ziel}`,
-          description: "Angelegt über die Urlaubszähler-Karte",
-          use_blueprint: {
-            path: this._config.blueprint_path,
-            input: {
-              teilnehmer,
-              ziel,
-              start: `${datum} ${zeit}:00`,
-              mobilgeraete: gewaehlt("geraete"),
-            },
+      await this._hass.callApi("POST", `config/automation/config/${id}`, {
+        alias: `Urlaub ${namen.join(", ")} – ${ziel}`,
+        description: "Angelegt über die Urlaubszähler-Karte",
+        use_blueprint: {
+          path: this._config.blueprint_path,
+          input: {
+            teilnehmer,
+            ziel,
+            start: `${datum} ${zeit}:00`,
+            transportmittel,
+            mobilgeraete: gewaehlt("geraete"),
           },
         },
-      );
-      await this._sofortAusfuehren(automatisierungsId);
+      });
+      await this._sofortAusfuehren(id);
       this._dialogSchliessen();
     } catch (fehler) {
       knopf.disabled = false;
-      knopf.textContent = "Anlegen";
+      knopf.textContent = bearbeiten ? "Speichern" : "Anlegen";
       this._fehlerZeigen(
-        `Konnte nicht angelegt werden: ${fehler?.body?.message || fehler?.message || fehler}`,
+        `Konnte nicht ${bearbeiten ? "gespeichert" : "angelegt"} werden: ` +
+          `${fehler?.body?.message || fehler?.message || fehler}`,
       );
     }
   }

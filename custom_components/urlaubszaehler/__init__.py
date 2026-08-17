@@ -23,6 +23,7 @@ from .const import (
     ATTR_ENTRY_ID,
     ATTR_START,
     ATTR_TEILNEHMER,
+    ATTR_TRANSPORTMITTEL,
     ATTR_URLAUB_ID,
     ATTR_ZIEL,
     ATTR_KOORDINATEN,
@@ -34,6 +35,8 @@ from .const import (
     SERVICE_ADD_VACATION,
     SERVICE_LIST_VACATIONS,
     SERVICE_REMOVE_VACATION,
+    TRANSPORTMITTEL_OPTIONEN,
+    TRANSPORTMITTEL_STANDARD,
     UID_PARTICIPANT,
     UID_VACATION,
 )
@@ -52,6 +55,12 @@ ADD_VACATION_SCHEMA = vol.Schema(
         vol.Required(ATTR_START): cv.datetime,
         vol.Optional(ATTR_URLAUB_ID): cv.string,
         vol.Optional(ATTR_ENTRY_ID): cv.string,
+        # Optional: fehlt die Angabe (z. B. bei älteren Automatisierungen,
+        # die den Blueprint noch nicht neu gespeichert haben), gilt
+        # "unbekannt" - der Urlaub bleibt dadurch vollständig nutzbar.
+        vol.Optional(
+            ATTR_TRANSPORTMITTEL, default=TRANSPORTMITTEL_STANDARD
+        ): vol.In(TRANSPORTMITTEL_OPTIONEN),
         # Manuell gesetzte Zielkoordinaten (z. B. aus dem Karten-Feld des
         # Blueprints). Haben Vorrang vor der automatischen Suche.
         vol.Optional(ATTR_KOORDINATEN): vol.Schema(
@@ -245,6 +254,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             mitglieder=mitglieder,
             breitengrad=koordinaten.get("latitude"),
             laengengrad=koordinaten.get("longitude"),
+            transportmittel=call.data[ATTR_TRANSPORTMITTEL],
         )
         return {
             ATTR_URLAUB_ID: urlaub.urlaub_id,
@@ -255,6 +265,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             "breitengrad": urlaub.breitengrad,
             "laengengrad": urlaub.laengengrad,
             "koordinaten_quelle": urlaub.koordinaten_quelle,
+            "transportmittel": urlaub.transportmittel,
             "nachricht": urlaub.nachricht(),
         }
 
@@ -280,6 +291,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
                     "tage": rest.tage,
                     "stunden": rest.stunden,
                     "minuten": rest.minuten,
+                    "transportmittel": urlaub.transportmittel,
                     "nachricht": urlaub.nachricht(),
                 }
             )

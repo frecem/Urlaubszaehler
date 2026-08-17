@@ -53,6 +53,18 @@ ATTR_START: Final = "start"
 ATTR_URLAUB_ID: Final = "urlaub_id"
 ATTR_ENTRY_ID: Final = "entry_id"
 ATTR_KOORDINATEN: Final = "koordinaten"
+ATTR_TRANSPORTMITTEL: Final = "transportmittel"
+
+# Transportmittel für die Anreise. "unbekannt" ist bewusst der Standardwert:
+# das Feld ist optional, bestehende Urlaube ohne Angabe bleiben gültig.
+TRANSPORTMITTEL_STANDARD: Final = "unbekannt"
+TRANSPORTMITTEL_OPTIONEN: Final = [
+    "flugzeug",
+    "auto",
+    "bahn",
+    "schiff",
+    TRANSPORTMITTEL_STANDARD,
+]
 
 # Der Sensor verschwindet exakt 24 Stunden nach dem Reisezeitpunkt.
 AUTO_DELETE_AFTER: Final = timedelta(hours=24)
@@ -66,3 +78,7 @@ PURGE_INTERVAL: Final = timedelta(minutes=1)
 # Abstand, in dem fehlende Zielkoordinaten erneut gesucht werden. War
 # OpenStreetMap beim Anlegen kurz nicht erreichbar, holt das den Ort nach.
 GEOCODE_RETRY_INTERVAL: Final = timedelta(minutes=30)
+
+# Die geschätzte Ankunftszeit erscheint erst kurz vor der Abreise - bei einer
+# ohnehin groben Schätzung wäre eine Uhrzeit Wochen im Voraus unpassend genau.
+ANKUNFTSZEIT_SCHWELLE: Final = timedelta(days=2)

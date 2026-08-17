@@ -8,7 +8,8 @@ from typing import Any
 
 from homeassistant.util import dt as dt_util
 
-from .const import AUTO_DELETE_AFTER
+from . import distanz, zielzeit
+from .const import ANKUNFTSZEIT_SCHWELLE, AUTO_DELETE_AFTER, TRANSPORTMITTEL_STANDARD
 
 
 def format_namen(namen: list[str]) -> str:
@@ -68,6 +69,7 @@ class Vacation:
     laengengrad: float | None = None
     koordinaten_quelle: str | None = None
     gefunden_als: str | None = None
+    transportmittel: str = TRANSPORTMITTEL_STANDARD
 
     def __post_init__(self) -> None:
         self.start = to_local(self.start)
@@ -112,6 +114,65 @@ class Vacation:
         jetzt = jetzt or dt_util.utcnow()
         return jetzt.timestamp() >= self.delete_ts
 
+    def entfernung_km(self, heimat_lat: float, heimat_lon: float) -> float | None:
+        """Luftlinienentfernung zum Ziel; None ohne bekannte Koordinaten."""
+        if not self.hat_koordinaten:
+            return None
+        return distanz.entfernung_km(
+            heimat_lat, heimat_lon, self.breitengrad, self.laengengrad
+        )
+
+    def reisedauer_stunden(
+        self, heimat_lat: float, heimat_lon: float
+    ) -> float | None:
+        """Grobe Reisedauer-Schätzung in Stunden.
+
+        None ohne Koordinaten oder bei Transportmittel "unbekannt" - dann
+        fehlt schlicht die Grundlage für eine Schätzung.
+        """
+        entfernung = self.entfernung_km(heimat_lat, heimat_lon)
+        if entfernung is None:
+            return None
+        return distanz.schaetze_dauer_stunden(self.transportmittel, entfernung)
+
+    def reisedauer_text(self, heimat_lat: float, heimat_lon: float) -> str | None:
+        """Menschenlesbare Reisedauer, z. B. 'ca. 8 Std.'."""
+        stunden = self.reisedauer_stunden(heimat_lat, heimat_lon)
+        if stunden is None:
+            return None
+        return distanz.formatiere_dauer(stunden)
+
+    def ankunft(self, heimat_lat: float, heimat_lon: float) -> datetime | None:
+        """Geschätzte Ankunftszeit in der Ortszeit am Ziel.
+
+        None ohne Reisedauer-Schätzung (kein Transportmittel oder keine
+        Koordinaten - siehe reisedauer_stunden()).
+        """
+        stunden = self.reisedauer_stunden(heimat_lat, heimat_lon)
+        if stunden is None:
+            return None
+        ankunft_heimatzeit = self.start + timedelta(hours=stunden)
+        return zielzeit.in_ortszeit(
+            ankunft_heimatzeit, self.breitengrad, self.laengengrad
+        )
+
+    def ankunftszeit_text(
+        self, heimat_lat: float, heimat_lon: float, jetzt: datetime | None = None
+    ) -> str | None:
+        """'Ankunft ca. 22:15 Uhr Ortszeit' - aber erst kurz vor der Abreise.
+
+        Weiter im Voraus wäre eine exakte Uhrzeit bei einer ohnehin groben
+        Reisedauer-Schätzung unpassend präzise (siehe ANKUNFTSZEIT_SCHWELLE) -
+        bis dahin zählt nur die Dauer (reisedauer_text).
+        """
+        rest = self.restzeit(jetzt)
+        if rest.sekunden > ANKUNFTSZEIT_SCHWELLE.total_seconds():
+            return None
+        zeitpunkt = self.ankunft(heimat_lat, heimat_lon)
+        if zeitpunkt is None:
+            return None
+        return f"Ankunft ca. {zeitpunkt.strftime('%H:%M')} Uhr Ortszeit"
+
     def nachricht(self, jetzt: datetime | None = None) -> str:
         """Der vom Nutzer gewünschte Satz."""
         rest = self.restzeit(jetzt)
@@ -142,6 +203,7 @@ class Vacation:
             "laengengrad": self.laengengrad,
             "koordinaten_quelle": self.koordinaten_quelle,
             "gefunden_als": self.gefunden_als,
+            "transportmittel": self.transportmittel,
         }
 
     @classmethod
@@ -161,4 +223,7 @@ class Vacation:
             laengengrad=daten.get("laengengrad"),
             koordinaten_quelle=daten.get("koordinaten_quelle"),
             gefunden_als=daten.get("gefunden_als"),
+            # get() statt [] : ältere, vor 1.0.5 gespeicherte Urlaube kennen
+            # dieses Feld noch nicht und bekommen den Standardwert.
+            transportmittel=daten.get("transportmittel", TRANSPORTMITTEL_STANDARD),
         )

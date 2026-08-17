@@ -135,6 +135,29 @@ async def test_urlaub_wird_beim_speichern_angelegt(
     assert zustand.attributes["breitengrad"] == 45.65
     # 60 Kalendertage; je nach Tageszeit sind das 59 oder 60 volle Tage.
     assert zustand.attributes["tage"] in (59, 60)
+    # Kein Transportmittel angegeben -> Blueprint-Standard "unbekannt".
+    assert zustand.attributes["transportmittel"] == "unbekannt"
+
+
+async def test_transportmittel_aus_dem_blueprint(
+    hass, eingerichtet, blueprint_installiert, handy
+):
+    """Ein gewähltes Transportmittel landet im Sensor-Attribut."""
+    await automatisierung_bauen(
+        hass,
+        {
+            "teilnehmer": [PAPA],
+            "ziel": "Gardasee",
+            "start": in_tagen(60),
+            "transportmittel": "auto",
+            "mobilgeraete": [handy],
+        },
+    )
+    hass.bus.async_fire("automation_reloaded")
+    await hass.async_block_till_done()
+
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["transportmittel"] == "auto"
 
 
 async def test_urlaub_wird_nach_neustart_wiederhergestellt(
