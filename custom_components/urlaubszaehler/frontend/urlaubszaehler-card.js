@@ -279,6 +279,7 @@ class UrlaubszaehlerCard extends HTMLElement {
       if (!Number.isFinite(zeitstempel)) continue;
       urlaube.push({
         entity_id: id,
+        urlaubId: a.urlaub_id ?? null,
         zeitstempel,
         ziel: a.ziel ?? "",
         wer: a.wer ?? "",
@@ -759,6 +760,17 @@ class UrlaubszaehlerCard extends HTMLElement {
 
     this._listenEl.querySelectorAll(".zeile").forEach((zeile) => {
       zeile.addEventListener("click", () => {
+        // Administratoren bearbeiten den Urlaub direkt in der Karte - alle
+        // anderen (können ohnehin keine Automatisierungen ändern) sehen wie
+        // gehabt die normale Detailansicht der Entität.
+        const istAdmin = this._hass?.user?.is_admin !== false;
+        const urlaub = this._urlaube.find(
+          (u) => u.entity_id === zeile.dataset.entity,
+        );
+        if (istAdmin && urlaub) {
+          this._dialogOeffnen(urlaub);
+          return;
+        }
         this.dispatchEvent(
           new CustomEvent("hass-more-info", {
             detail: { entityId: zeile.dataset.entity },
@@ -814,44 +826,104 @@ class UrlaubszaehlerCard extends HTMLElement {
     return this._geraete;
   }
 
-  async _dialogOeffnen() {
+  /**
+   * Die vom Blueprint gespeicherten Eingaben für einen bestehenden Urlaub
+   * laden, um den Dialog damit vorzubefüllen.
+   *
+   * Der Blueprint leitet 'urlaub_id' aus der eigenen entity_id ab
+   * (this.entity_id | replace('automation.', '')) - deshalb funktioniert der
+   * Weg zurück genauso: 'automation.' + urlaubId. Existiert diese
+   * Automatisierung nicht (z. B. weil der Urlaub per Dienst ohne Blueprint
+   * angelegt wurde), gibt es hier nichts zu bearbeiten.
+   */
+  async _bearbeitenLaden(urlaub) {
+    if (!urlaub.urlaubId) return null;
+    const zustand = this._hass.states[`automation.${urlaub.urlaubId}`];
+    const automatisierungsId = zustand?.attributes?.id;
+    if (!automatisierungsId) return null;
+    try {
+      const config = await this._hass.callApi(
+        "GET",
+        `config/automation/config/${automatisierungsId}`,
+      );
+      return { automatisierungsId, input: config?.use_blueprint?.input ?? {} };
+    } catch (fehler) {
+      return null;
+    }
+  }
+
+  /**
+   * Dialog zum Anlegen ODER Bearbeiten eines Urlaubs öffnen.
+   *
+   * Ohne Argument: neuer Urlaub, leeres Formular. Mit einem Eintrag aus
+   * `this._urlaube`: bestehender Urlaub, vorbefüllt aus der zugehörigen
+   * Automatisierung - lässt sich diese nicht finden, fällt der Aufrufer auf
+   * die normale Detailansicht zurück (siehe Klick-Handler in _listeZeichnen).
+   */
+  async _dialogOeffnen(urlaub = null) {
+    const bearbeiten = urlaub ? await this._bearbeitenLaden(urlaub) : null;
+    if (urlaub && !bearbeiten) {
+      this.dispatchEvent(
+        new CustomEvent("hass-more-info", {
+          detail: { entityId: urlaub.entity_id },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      return;
+    }
+    const input = bearbeiten?.input ?? {};
+
     const geraete = await this._geraeteLaden();
     const teilnehmer = this._teilnehmer();
 
-    // Vorschlag: morgen, 08:00 Uhr.
-    const morgen = new Date(Date.now() + 86400000);
-    const datum = morgen.toISOString().slice(0, 10);
+    let datum, zeit;
+    if (input.start) {
+      const [d, t] = String(input.start).split(" ");
+      datum = d;
+      zeit = (t || "08:00:00").slice(0, 5);
+    } else {
+      // Vorschlag für einen neuen Urlaub: morgen, 08:00 Uhr.
+      const morgen = new Date(Date.now() + 86400000);
+      datum = morgen.toISOString().slice(0, 10);
+      zeit = "08:00";
+    }
 
-    const liste = (eintraege, name, leerText) =>
+    const gewaehlteTeilnehmer = new Set(input.teilnehmer ?? []);
+    const gewaehlteGeraete = new Set(input.mobilgeraete ?? []);
+
+    const liste = (eintraege, name, leerText, gewaehlt) =>
       eintraege.length
         ? `<div class="auswahl">${eintraege
             .map(
               (e) =>
                 `<label><input type="checkbox" name="${name}" ` +
-                `value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</label>`,
+                `value="${escapeHtml(e.id)}"${gewaehlt.has(e.id) ? " checked" : ""}>` +
+                `${escapeHtml(e.name)}</label>`,
             )
             .join("")}</div>`
         : `<div class="auswahl leer">${leerText}</div>`;
 
     this._dialogEl.innerHTML = `
-      <h2>Neuen Urlaub anlegen</h2>
+      <h2>${bearbeiten ? "Urlaub bearbeiten" : "Neuen Urlaub anlegen"}</h2>
       <p class="hinweis">Es wird eine Automatisierung aus dem Blueprint
-        erstellt – mit Countdown-Sensor und Push-Erinnerungen.</p>
+        ${bearbeiten ? "aktualisiert" : "erstellt"} – mit Countdown-Sensor und Push-Erinnerungen.</p>
       <div class="fehler" hidden></div>
       <div class="feld">
         <label class="titel">Wer fährt in den Urlaub?</label>
         ${liste(teilnehmer, "teilnehmer",
-          "Keine Personen angelegt – bitte zuerst den Urlaubszähler einrichten.")}
+          "Keine Personen angelegt – bitte zuerst den Urlaubszähler einrichten.",
+          gewaehlteTeilnehmer)}
       </div>
       <div class="feld">
         <label class="titel" for="uz-ziel">Wohin geht die Reise?</label>
-        <input type="text" id="uz-ziel" placeholder="z. B. Gardasee">
+        <input type="text" id="uz-ziel" placeholder="z. B. Gardasee" value="${escapeHtml(input.ziel ?? "")}">
       </div>
       <div class="feld">
         <label class="titel">Wann geht es los?</label>
         <div class="zeitzeile">
           <input type="date" id="uz-datum" value="${datum}">
-          <input type="time" id="uz-zeit" value="08:00">
+          <input type="time" id="uz-zeit" value="${zeit}">
         </div>
       </div>
       <div class="feld">
@@ -867,19 +939,24 @@ class UrlaubszaehlerCard extends HTMLElement {
       <div class="feld">
         <label class="titel">Erinnerungen an diese Geräte</label>
         ${liste(geraete, "geraete",
-          "Keine Geräte mit der Home-Assistant-App gefunden.")}
+          "Keine Geräte mit der Home-Assistant-App gefunden.",
+          gewaehlteGeraete)}
       </div>
       <div class="dialog-knoepfe">
         <button class="knopf leise" type="button" data-abbrechen>Abbrechen</button>
-        <button class="knopf" type="button" data-speichern>Anlegen</button>
+        <button class="knopf" type="button" data-speichern>${bearbeiten ? "Speichern" : "Anlegen"}</button>
       </div>
     `;
+    this._dialogEl.querySelector("#uz-transportmittel").value =
+      input.transportmittel ?? "unbekannt";
     this._dialogEl
       .querySelector("[data-abbrechen]")
       .addEventListener("click", () => this._dialogSchliessen());
     this._dialogEl
       .querySelector("[data-speichern]")
-      .addEventListener("click", () => this._speichern());
+      .addEventListener("click", () =>
+        this._speichern(bearbeiten?.automatisierungsId ?? null),
+      );
     this._huelleEl.hidden = false;
     this._dialogEl.querySelector("#uz-ziel").focus();
   }
@@ -895,7 +972,9 @@ class UrlaubszaehlerCard extends HTMLElement {
     el.hidden = false;
   }
 
-  async _speichern() {
+  /** @param {string|null} automatisierungsId Gesetzt beim Bearbeiten, sonst neu. */
+  async _speichern(automatisierungsId = null) {
+    const bearbeiten = Boolean(automatisierungsId);
     const gewaehlt = (name) =>
       [...this._dialogEl.querySelectorAll(`input[name="${name}"]:checked`)].map(
         (e) => e.value,
@@ -921,38 +1000,39 @@ class UrlaubszaehlerCard extends HTMLElement {
 
     const knopf = this._dialogEl.querySelector("[data-speichern]");
     knopf.disabled = true;
-    knopf.textContent = "Wird angelegt …";
+    knopf.textContent = bearbeiten ? "Wird gespeichert …" : "Wird angelegt …";
 
     const namen = teilnehmer.map(
       (id) => this._hass.states[id]?.attributes?.anzeigename ?? id,
     );
-    const automatisierungsId = String(Date.now());
+    // Beim Bearbeiten dieselbe ID weiterverwenden: derselbe Aufruf, den
+    // Home Assistant auch beim Speichern in seinem eigenen Automatisierungs-
+    // Editor macht, aktualisiert den bestehenden Eintrag statt einen zweiten
+    // anzulegen.
+    const id = automatisierungsId ?? String(Date.now());
     try {
-      await this._hass.callApi(
-        "POST",
-        `config/automation/config/${automatisierungsId}`,
-        {
-          alias: `Urlaub ${namen.join(", ")} – ${ziel}`,
-          description: "Angelegt über die Urlaubszähler-Karte",
-          use_blueprint: {
-            path: this._config.blueprint_path,
-            input: {
-              teilnehmer,
-              ziel,
-              start: `${datum} ${zeit}:00`,
-              transportmittel,
-              mobilgeraete: gewaehlt("geraete"),
-            },
+      await this._hass.callApi("POST", `config/automation/config/${id}`, {
+        alias: `Urlaub ${namen.join(", ")} – ${ziel}`,
+        description: "Angelegt über die Urlaubszähler-Karte",
+        use_blueprint: {
+          path: this._config.blueprint_path,
+          input: {
+            teilnehmer,
+            ziel,
+            start: `${datum} ${zeit}:00`,
+            transportmittel,
+            mobilgeraete: gewaehlt("geraete"),
           },
         },
-      );
-      await this._sofortAusfuehren(automatisierungsId);
+      });
+      await this._sofortAusfuehren(id);
       this._dialogSchliessen();
     } catch (fehler) {
       knopf.disabled = false;
-      knopf.textContent = "Anlegen";
+      knopf.textContent = bearbeiten ? "Speichern" : "Anlegen";
       this._fehlerZeigen(
-        `Konnte nicht angelegt werden: ${fehler?.body?.message || fehler?.message || fehler}`,
+        `Konnte nicht ${bearbeiten ? "gespeichert" : "angelegt"} werden: ` +
+          `${fehler?.body?.message || fehler?.message || fehler}`,
       );
     }
   }

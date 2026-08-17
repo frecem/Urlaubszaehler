@@ -163,12 +163,43 @@ gefunden" (`ohneOrt`). Ohne Koordinaten gibt es auch keine Entfernung und
 keine Dauer – dieser Fall braucht dieselbe saubere Behandlung, sonst erscheint
 „0 km, ca. 0 Std".
 
-### 6. Bearbeiten direkt aus der Karte
-Ergänzt die verbindliche Rahmenbedingung oben um den eigentlichen
-Komfortgewinn: Ein Klick auf eine Zeile öffnet heute nur die Detailansicht
-(`hass-more-info`); bearbeiten geht ausschließlich über Einstellungen →
-Automatisierungen. Der vorhandene Anlege-Dialog ließe sich vorbefüllt zum
-Bearbeiten wiederverwenden.
+### 6. Bearbeiten direkt aus der Karte — erledigt
+Ein Klick auf eine Zeile öffnet für Administratoren jetzt den vorhandenen
+Anlege-Dialog im Bearbeiten-Modus, vorbefüllt aus der zugehörigen
+Blueprint-Automatisierung (Teilnehmer, Ziel, Datum/Uhrzeit, Transportmittel,
+Geräte). Titel und Knopf wechseln auf „Urlaub bearbeiten"/„Speichern". Beim
+Speichern wird **dieselbe** Automatisierungs-ID weiterverwendet – exakt der
+Aufruf, den Home Assistants eigener Automatisierungs-Editor auch macht,
+aktualisiert also den bestehenden Eintrag statt einen zweiten anzulegen
+(erfüllt damit die Bestandsschutz-Rahmenbedingung von oben).
+
+Technisch: der Blueprint leitet `urlaub_id` aus der eigenen `entity_id` ab
+(`this.entity_id | replace('automation.', '')`) – der Rückweg
+(`"automation." + urlaubId`) liefert also zuverlässig dieselbe
+Automatisierung zurück, ohne eine weitere Zuordnungstabelle zu brauchen.
+Deren `attributes.id` (die interne Config-ID) wird für
+`GET/POST config/automation/config/{id}` gebraucht.
+
+**Absichtlich nicht enthalten:** Löschen aus der Karte. Das würde nicht nur
+den Urlaub, sondern die ganze Automatisierung entfernen müssen (sonst legt
+sie den Urlaub beim nächsten Lauf einfach neu an) – ein eigener, größerer
+Schritt, den ursprünglich niemand angefragt hat. Entfernen bleibt wie bisher
+über Konfigurieren → Geplante Urlaube entfernen oder
+`urlaubszaehler.remove_vacation` möglich.
+
+**Rückfall abgesichert:** Existiert keine passende Automatisierung (z. B. ein
+Urlaub, der per Dienstaufruf ohne Blueprint angelegt wurde), öffnet der Klick
+stattdessen wie bisher die normale Detailansicht – kein kaputter Dialog.
+Nicht-Administratoren sehen ebenfalls unverändert nur die Detailansicht.
+
+Per Playwright funktional geprüft (nicht nur optisch): Vorbefüllung korrekt,
+Speichern schickt den POST an dieselbe Automatisierungs-ID, und der
+Rückfall auf `hass-more-info` löst zuverlässig aus, wenn keine
+Automatisierung gefunden wird.
+
+*Geänderte Stelle:* `tools/urlaubszaehler-card.src.js`
+(`_bearbeitenLaden` neu, `_dialogOeffnen`/`_speichern` erweitert,
+Klick-Handler in `_listeZeichnen`).
 
 ### 7. Desktop-Zentrierungsfehler — erledigt
 Vom Nutzer ursprünglich gemeldet („im Desktop-Modus sieht die Karte
