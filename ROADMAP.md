@@ -126,11 +126,14 @@ Komfortgewinn: Ein Klick auf eine Zeile öffnet heute nur die Detailansicht
 Automatisierungen. Der vorhandene Anlege-Dialog ließe sich vorbefüllt zum
 Bearbeiten wiederverwenden.
 
-### 7. Offener Desktop-Zentrierungsfehler
-Vom Nutzer gemeldet („im Desktop-Modus sieht die Karte verschoben aus"), aber
-nie reproduziert: Eine Messung bei 1920 px ergab in Sections, Masonry und
-Panel jeweils eine exakt zentrierte Karte. Screenshot und View-YAML stehen
-noch aus. Sollte geklärt werden, bevor 1.0.5 weitere Anzeigen dazupackt.
+### 7. Desktop-Zentrierungsfehler — erledigt
+Vom Nutzer ursprünglich gemeldet („im Desktop-Modus sieht die Karte
+verschoben aus"), aber nie reproduziert: Eine Messung bei 1920 px ergab in
+Sections, Masonry und Panel jeweils eine exakt zentrierte Karte. Ein vom
+Nutzer nachgereichter Screenshot (Desktop-Modus im mobilen Browser) zeigte die
+Karte ebenfalls sauber zentriert; vermutlich hatte der zuvor aktive
+Dashboard-Bearbeiten-Modus die Wahrnehmung verzerrt. Nutzer bestätigt: passt
+jetzt. Kein Blocker mehr für 1.0.5.
 
 ## Geprüft und bewusst nicht verfolgt
 
