@@ -8,8 +8,8 @@ from typing import Any
 
 from homeassistant.util import dt as dt_util
 
-from . import distanz
-from .const import AUTO_DELETE_AFTER, TRANSPORTMITTEL_STANDARD
+from . import distanz, zielzeit
+from .const import ANKUNFTSZEIT_SCHWELLE, AUTO_DELETE_AFTER, TRANSPORTMITTEL_STANDARD
 
 
 def format_namen(namen: list[str]) -> str:
@@ -141,6 +141,37 @@ class Vacation:
         if stunden is None:
             return None
         return distanz.formatiere_dauer(stunden)
+
+    def ankunft(self, heimat_lat: float, heimat_lon: float) -> datetime | None:
+        """Geschätzte Ankunftszeit in der Ortszeit am Ziel.
+
+        None ohne Reisedauer-Schätzung (kein Transportmittel oder keine
+        Koordinaten - siehe reisedauer_stunden()).
+        """
+        stunden = self.reisedauer_stunden(heimat_lat, heimat_lon)
+        if stunden is None:
+            return None
+        ankunft_heimatzeit = self.start + timedelta(hours=stunden)
+        return zielzeit.in_ortszeit(
+            ankunft_heimatzeit, self.breitengrad, self.laengengrad
+        )
+
+    def ankunftszeit_text(
+        self, heimat_lat: float, heimat_lon: float, jetzt: datetime | None = None
+    ) -> str | None:
+        """'Ankunft ca. 22:15 Uhr Ortszeit' - aber erst kurz vor der Abreise.
+
+        Weiter im Voraus wäre eine exakte Uhrzeit bei einer ohnehin groben
+        Reisedauer-Schätzung unpassend präzise (siehe ANKUNFTSZEIT_SCHWELLE) -
+        bis dahin zählt nur die Dauer (reisedauer_text).
+        """
+        rest = self.restzeit(jetzt)
+        if rest.sekunden > ANKUNFTSZEIT_SCHWELLE.total_seconds():
+            return None
+        zeitpunkt = self.ankunft(heimat_lat, heimat_lon)
+        if zeitpunkt is None:
+            return None
+        return f"Ankunft ca. {zeitpunkt.strftime('%H:%M')} Uhr Ortszeit"
 
     def nachricht(self, jetzt: datetime | None = None) -> str:
         """Der vom Nutzer gewünschte Satz."""

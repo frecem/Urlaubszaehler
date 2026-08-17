@@ -84,38 +84,48 @@ liegt bereits zentral in `urlaubszaehler-card.src.js` bereit.
 `Vacation`-Methoden), `sensor.py` (drei neue Attribute),
 `tools/urlaubszaehler-card.src.js` (`_urlaubeLesen`, `_listeZeichnen`, CSS).
 
-### 3. Ankunftszeit erst kurz vorher anzeigen
-Weit im Voraus nur die **Reisedauer** zeigen (z. B. "ca. 8 Stunden"), die
-konkrete **Ankunftsuhrzeit** (Start + Dauer) erst ab einem Schwellwert von
-1–2 Tagen vor Abreise – vorher wäre eine exakte Uhrzeit bei einer ohnehin
-groben Schätzung unpassend präzise. Kleine, isolierte Logikänderung an der
-bestehenden `nachricht`/Attribut-Berechnung in `models.py`.
+### 3. Ankunftszeit erst kurz vorher anzeigen — erledigt
+Weit im Voraus steht nur die **Reisedauer** (`reisedauer_text`, z. B.
+„ca. 14 Std."), die konkrete **Ankunftsuhrzeit** ersetzt sie erst ab
+`ANKUNFTSZEIT_SCHWELLE` (2 Tage vor Abreise, `const.py`) – vorher wäre eine
+exakte Uhrzeit bei einer ohnehin groben Schätzung unpassend präzise. Neue
+Attribute `ankunft()`/`ankunftszeit_text()` in `models.py`, dabei automatisch
+in der **Ortszeit am Ziel** (siehe Punkt 1 unten – `zielzeit.py`, neue
+Abhängigkeit `timezonefinder`). Die Karte zeigt in der Liste automatisch die
+Ankunftszeit statt der Dauer, sobald das Attribut befüllt ist. 8 neue Tests
+(`test_zielzeit.py` + Integration/Schwellwert in `test_urlaube.py`, inkl.
+`freezer`), komplette Suite (91 Tests) grün.
 
 ### 4. Transportmittel-Icons auf der Karte
 Passend zu Punkt 1 – der Bogen bzw. ein kleines Symbol am Zielpunkt sieht je
 nach Transportmittel anders aus (Flugzeug/Auto/Zug/Schiff), rein visuell,
-kein zusätzlicher Netzwerkaufruf.
+kein zusätzlicher Netzwerkaufruf. `TRANSPORTMITTEL_EMOJI` in
+`urlaubszaehler-card.src.js` liegt bereits bereit (bisher nur für die Liste
+genutzt, siehe Punkt 2 oben).
 
-### 5. Entfernung in km anzeigen
-Ergänzt die Dauer um eine harte Zahl (aus denselben Koordinaten per
-Haversine), keine neue Abhängigkeit.
+### 5. Entfernung in km anzeigen — erledigt
+Kam mit Schritt 2/3 mit: `entfernung_km`-Attribut, in der Liste angezeigt.
 
 ## Zu klärende Details vor der Umsetzung
 
 Punkte, die bei der Umsetzung sonst erst spät auffallen. Die Befunde zur
 Karte stammen aus einer Durchsicht von `tools/urlaubszaehler-card.src.js`.
 
-### 1. Zeitzone am Ziel (betrifft Punkt 3)
+### 1. Zeitzone am Ziel (betrifft Punkt 3) — erledigt
 Bei Fernreisen ist eine Ankunftszeit in Heimatzeit irreführend: Berlin → New
 York, Abflug 10:00, 8 Std Flug – Ankunft ist nicht 18:00, sondern 12:00
 Ortszeit am Ziel. Genau bei Langstrecken ist die Anzeige am interessantesten.
 
-**Entschieden:** Ortszeit am Reiseziel anzeigen, dafür wird eine Abhängigkeit
-in Kauf genommen (`manifest.json` → `requirements`, bislang leer). Ein Paket
-wie `timezonefinder` liefert aus Koordinaten die IANA-Zeitzone und arbeitet
-dabei **offline** (eigene Grenzdaten, kein Netzwerkaufruf) – die
-Datenschutz-Linie des Projekts bleibt damit unangetastet. Die eigentliche
-Umrechnung übernimmt `zoneinfo` aus der Standardbibliothek.
+Umgesetzt wie entschieden: `timezonefinder==8.2.5` als erste Abhängigkeit der
+Integration (`manifest.json` → `requirements`), neues Modul `zielzeit.py`.
+Bestimmt die IANA-Zeitzone rein aus den Koordinaten, **komplett offline**
+(eigene Grenzdaten, kein Netzwerkaufruf) – die Datenschutz-Linie des Projekts
+bleibt unangetastet, README entsprechend ergänzt. Die Umrechnung übernimmt
+`zoneinfo` aus der Standardbibliothek. Einziger Wermutstropfen: Das Paket
+bringt rund **65 MB** an Zeitzonen-Geodaten mit (`du -sh` im venv geprüft) –
+spürbar größer als der Rest der Integration zusammen. War dem Nutzer beim
+Entscheid bewusst ("auch mit Zusatzpaket"), aber hier nochmal explizit
+festgehalten, falls das bei einem zukünftigen Update noch mal überrascht.
 
 ### 2. Auto und Bahn zu Zielen über Wasser (betrifft Punkt 2)
 Luftlinie × Straßenfaktor kennt keine Fähren: „Mit dem Auto nach Mallorca"

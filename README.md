@@ -182,6 +182,9 @@ in jeder Lovelace-Karte.
 | `breitengrad` / `laengengrad` | `45.65` / `10.65` (für die Karte, sonst `null`) |
 | `koordinaten_quelle` | `geocoding`, `manuell` oder `null` |
 | `gefunden_als` | `Lago di Garda, Italia` |
+| `entfernung_km` | `780` – Luftlinie zum Ziel, sobald der Ort bekannt ist (sonst `null`) |
+| `reisedauer_std` / `reisedauer_text` | `14.0` / `ca. 14 Std.` – grobe Schätzung anhand von `transportmittel`, sonst `null` |
+| `ankunftszeit_text` | `Ankunft ca. 22:15 Uhr Ortszeit` – erst ab 2 Tagen vor der Abreise befüllt, vorher `null` |
 
 ---
 
@@ -324,6 +327,9 @@ keine Ortssuche statt und die Integration arbeitet vollständig offline.
   oder Skripte.
 * Alle Urlaubsdaten liegen ausschließlich in
   `.storage/urlaubszaehler.<entry_id>` auf deinem eigenen Server.
+* Die Ortszeit am Reiseziel (für die Ankunftszeit-Anzeige kurz vor der
+  Abreise) wird mit der Python-Bibliothek `timezonefinder` **lokal**
+  bestimmt – keine Online-Zeitzonen-API, keine zusätzliche Netzwerkanfrage.
 * Push-Nachrichten laufen über die Home-Assistant-App und nehmen den Weg, den
   du dort ohnehin nutzt.
 

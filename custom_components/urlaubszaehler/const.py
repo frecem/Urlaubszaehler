@@ -78,3 +78,7 @@ PURGE_INTERVAL: Final = timedelta(minutes=1)
 # Abstand, in dem fehlende Zielkoordinaten erneut gesucht werden. War
 # OpenStreetMap beim Anlegen kurz nicht erreichbar, holt das den Ort nach.
 GEOCODE_RETRY_INTERVAL: Final = timedelta(minutes=30)
+
+# Die geschätzte Ankunftszeit erscheint erst kurz vor der Abreise - bei einer
+# ohnehin groben Schätzung wäre eine Uhrzeit Wochen im Voraus unpassend genau.
+ANKUNFTSZEIT_SCHWELLE: Final = timedelta(days=2)

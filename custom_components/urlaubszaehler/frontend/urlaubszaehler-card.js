@@ -287,6 +287,8 @@ class UrlaubszaehlerCard extends HTMLElement {
         transportmittel: a.transportmittel ?? "unbekannt",
         entfernungKm: typeof a.entfernung_km === "number" ? a.entfernung_km : null,
         reisedauerText: typeof a.reisedauer_text === "string" ? a.reisedauer_text : null,
+        ankunftszeitText:
+          typeof a.ankunftszeit_text === "string" ? a.ankunftszeit_text : null,
       });
     }
 
@@ -711,11 +713,12 @@ class UrlaubszaehlerCard extends HTMLElement {
       .map((urlaub, index) => {
         const ohneOrt = urlaub.lat === null || urlaub.lon === null;
         const reiseTeile = [];
-        if (urlaub.reisedauerText) {
+        // Kurz vor der Abreise ersetzt die Ankunftsuhrzeit die Dauer - siehe
+        // ANKUNFTSZEIT_SCHWELLE in models.py.
+        const reiseText = urlaub.ankunftszeitText ?? urlaub.reisedauerText;
+        if (reiseText) {
           const emoji = TRANSPORTMITTEL_EMOJI[urlaub.transportmittel];
-          reiseTeile.push(
-            emoji ? `${emoji} ${urlaub.reisedauerText}` : urlaub.reisedauerText,
-          );
+          reiseTeile.push(emoji ? `${emoji} ${reiseText}` : reiseText);
         }
         if (urlaub.entfernungKm !== null) {
           reiseTeile.push(`${Math.round(urlaub.entfernungKm)} km`);

@@ -137,6 +137,10 @@ class UrlaubSensor(SensorEntity):
             "entfernung_km": round(entfernung) if entfernung is not None else None,
             "reisedauer_std": self._urlaub.reisedauer_stunden(heimat_lat, heimat_lon),
             "reisedauer_text": self._urlaub.reisedauer_text(heimat_lat, heimat_lon),
+            # Erst kurz vor der Abreise befüllt - siehe ANKUNFTSZEIT_SCHWELLE.
+            "ankunftszeit_text": self._urlaub.ankunftszeit_text(
+                heimat_lat, heimat_lon, jetzt
+            ),
             # Für die Weltkarte der Lovelace-Karte:
             "breitengrad": self._urlaub.breitengrad,
             "laengengrad": self._urlaub.laengengrad,

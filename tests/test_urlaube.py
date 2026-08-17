@@ -278,6 +278,32 @@ async def test_reisedauer_ohne_koordinaten_ist_none(hass, eingerichtet):
     assert zustand.attributes["reisedauer_text"] is None
 
 
+async def test_ankunftszeit_erst_kurz_vor_abreise(hass, eingerichtet, freezer):
+    """Weit im Voraus nur die Dauer, die Ankunftsuhrzeit erst kurz vorher."""
+    await anlegen(hass, [PAPA], "Gardasee", tage=12, transportmittel="auto")
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["reisedauer_text"] is not None
+    assert zustand.attributes["ankunftszeit_text"] is None
+
+    # Nur noch rund ein Tag bis zur Abreise - jetzt greift die Schwelle.
+    freezer.tick(timedelta(days=11))
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+    await hass.async_block_till_done()
+
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    text = zustand.attributes["ankunftszeit_text"]
+    assert text is not None
+    assert text.startswith("Ankunft ca. ")
+    assert text.endswith("Uhr Ortszeit")
+
+
+async def test_ankunftszeit_ohne_transportmittel_bleibt_none(hass, eingerichtet):
+    """Ohne Transportmittel gibt es auch kurz vor der Abreise keine Uhrzeit."""
+    await anlegen(hass, [PAPA], "Gardasee", tage=1)
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["ankunftszeit_text"] is None
+
+
 async def test_transportmittel_ungueltiger_wert_wird_abgelehnt(hass, eingerichtet):
     """Nur die bekannten Optionen sind erlaubt."""
     with pytest.raises(vol.Invalid):
