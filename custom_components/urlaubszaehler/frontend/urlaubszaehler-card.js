@@ -11,7 +11,7 @@
  * Kartendaten: Natural Earth (public domain), vereinfacht und delta-kodiert.
  */
 
-const KARTEN_VERSION = "1.0.2";
+const KARTEN_VERSION = "1.0.5";
 
 /** Pfad des mitgelieferten Blueprints im Konfigurationsverzeichnis. */
 const BLUEPRINT_PFAD = "urlaubszaehler/urlaub_anlegen.yaml";
