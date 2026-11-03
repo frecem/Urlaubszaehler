@@ -12,6 +12,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util, slugify
 
+from . import zielzeit
 from .const import (
     ART_FAMILIE,
     GEOCODE_RETRY_INTERVAL,
@@ -27,7 +28,6 @@ from .const import (
     STORE_BLUEPRINT_PRUEFSUMME,
     TRANSPORTMITTEL_STANDARD,
 )
-from . import zielzeit
 from .geocoding import async_geocode
 from .models import Vacation
 
