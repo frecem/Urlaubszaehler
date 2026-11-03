@@ -87,7 +87,7 @@ Tage/Stunden/Minuten und die fertige `nachricht` stehen in den Attributen und
 werden in `extra_state_attributes` live berechnet. Die Restzeit wird bei 0
 abgeschnitten (`Restzeit.from_seconds` → `max(0, …)`), nie negativ.
 
-### Zwei Fallstricke, die schon Fehler verursacht haben
+### Drei Fallstricke, die schon Fehler verursacht haben
 
 * **Auto-Delete rechnet über UTC.** `models.Vacation.delete_at` addiert die 24
   Stunden auf die UTC-Zeit, nicht auf die lokale – lokale Addition ergibt an der
@@ -98,6 +98,20 @@ abgeschnitten (`Restzeit.from_seconds` → `max(0, …)`), nie negativ.
   `entity_registry.async_get_entity_id(Platform.SENSOR, DOMAIN, unique_id)` +
   `registry.async_remove(entity_id)` verschwinden, sonst bleibt eine Leiche im
   Entitätenregister.
+* **`timezonefinder` gehört in den Executor.** Das Paket liest mit echtem
+  `open()` (u. a. `zone_names.py`, `coord_accessors.py`) rund 65 MB von der
+  Platte. Aus dem Event-Loop heraus meldet Home Assistant „Detected blocking
+  call to open … by custom integration 'urlaubszaehler'" und der ganze Server
+  steht so lange. Deshalb bestimmt der **Manager** die Zielzeitzone beim
+  Anlegen/Laden eines Urlaubs per `async_add_executor_job` und hinterlegt sie
+  am `Vacation`-Objekt (`zielzeitzone` im Speicher, `zielzone` zur Laufzeit);
+  `extra_state_attributes` rechnet dann nur noch. Dasselbe gilt für
+  `ZoneInfo()` – dafür gibt es `dt_util.async_get_time_zone()`.
+  Achtung beim Testen: Home Assistant schaltet den Blocking-Detektor für
+  `open()` in Tests ab (`skip_for_tests`), ein Test auf die Logmeldung läuft
+  also ins Leere. Die Tests prüfen stattdessen, dass die Suche in einem
+  anderen Thread als dem Event-Loop läuft und dass eine Zustandsabfrage den
+  Finder gar nicht mehr anfasst.
 
 ### Entity-IDs
 

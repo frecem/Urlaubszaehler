@@ -25,7 +25,20 @@ Beispieldaten – siehe [Datenschutz](#8-datenschutz).*
 Mindestversion: **Home Assistant 2024.11**
 
 <details>
-<summary><strong>Was ist neu in 1.0.5?</strong></summary>
+<summary><strong>Was ist neu in 1.0.6?</strong></summary>
+
+* **Fehlerbehebung:** Home Assistant meldete „Detected blocking call to open
+  … by custom integration 'urlaubszaehler'". Die Zeitzonen-Suche für die
+  Ankunftszeit (`timezonefinder`, rund 65 MB Geodaten) lief im falschen
+  Moment und hielt Home Assistant dabei kurz an. Sie passiert jetzt einmalig
+  im Hintergrund beim Anlegen eines Urlaubs; die Anzeige rechnet nur noch.
+  Nebeneffekt: Nach einem Neustart werden die Geodaten nicht mehr erneut
+  eingelesen.
+* Neues Sensor-Attribut `zielzeitzone` (z. B. `Europe/Rome`) – die Zeitzone,
+  auf die sich `ankunftszeit_text` bezieht.
+
+<details>
+<summary>Was war neu in 1.0.5?</summary>
 
 * **Transportmittel** beim Anlegen eines Urlaubs auswählbar (Flugzeug, Auto,
   Bahn, Schiff, optional) – im Blueprint und im Karten-Dialog.
@@ -58,6 +71,7 @@ Mindestversion: **Home Assistant 2024.11**
   damit sie auch beim Öffnen des Repositorys direkt aus Home Assistant/HACS
   heraus korrekt angezeigt werden.
 
+</details>
 </details>
 </details>
 
@@ -197,13 +211,14 @@ in jeder Lovelace-Karte.
 | `verbleibende_sekunden` | `1058520` |
 | `gestartet` | `true`, sobald der Reisezeitpunkt erreicht ist |
 | `wird_geloescht_am` | `2026-08-15T07:30:00+02:00` |
-| `zeitzone` | `Europe/Berlin` |
+| `zeitzone` | `Europe/Berlin` – die in Home Assistant eingestellte Zeitzone |
 | `breitengrad` / `laengengrad` | `45.65` / `10.65` (für die Karte, sonst `null`) |
 | `koordinaten_quelle` | `geocoding`, `manuell` oder `null` |
 | `gefunden_als` | `Lago di Garda, Italia` |
 | `entfernung_km` | `780` – Luftlinie zum Ziel, sobald der Ort bekannt ist (sonst `null`) |
 | `reisedauer_std` / `reisedauer_text` | `14.0` / `ca. 14 Std.` – grobe Schätzung anhand von `transportmittel`, sonst `null` |
 | `ankunftszeit_text` | `Ankunft ca. 22:15 Uhr Ortszeit` – erst ab 2 Tagen vor der Abreise befüllt, vorher `null` |
+| `zielzeitzone` | `Europe/Rome` – Zeitzone am Reiseziel, in der `ankunftszeit_text` angegeben ist (sonst `null`) |
 
 ---
 

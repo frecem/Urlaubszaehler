@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 import voluptuous as vol
@@ -11,6 +13,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
+from custom_components.urlaubszaehler import zielzeit
 from custom_components.urlaubszaehler.const import DOMAIN
 
 PAPA = "binary_sensor.urlaubszahler_papa"
@@ -328,6 +331,86 @@ async def test_bestehender_urlaub_ohne_transportmittel_bleibt_nutzbar(
     }
     urlaub = Vacation.from_dict(alt)
     assert urlaub.transportmittel == "unbekannt"
+
+
+# ---------------------------------------------------------------------------
+# Zeitzone am Ziel: wird einmalig im Executor bestimmt, nie im Event-Loop
+# ---------------------------------------------------------------------------
+
+
+async def test_zielzeitzone_wird_bestimmt_und_gespeichert(
+    hass, eingerichtet, hass_storage
+):
+    """Der Name der Zielzeitzone landet im Sensor und im Speicher."""
+    await anlegen(hass, [PAPA], "Gardasee", transportmittel="auto")
+
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["zielzeitzone"] == "Europe/Rome"
+
+    gespeichert = hass_storage[f"{DOMAIN}.{eingerichtet.entry_id}"]["data"]
+    assert gespeichert["vacations"][0]["zielzeitzone"] == "Europe/Rome"
+
+
+async def test_zeitzone_wird_nicht_im_event_loop_bestimmt(hass, eingerichtet):
+    """timezonefinder liest ~65 MB von der Platte - niemals im Event-Loop.
+
+    Home Assistant meldet so etwas als "Detected blocking call ... inside the
+    event loop"; genau dieser Fehler steckte in 1.0.5.
+    """
+    loop_thread = threading.get_ident()
+    threads: list[int] = []
+
+    def _merker(lat: float, lon: float) -> str:
+        threads.append(threading.get_ident())
+        return "Europe/Rome"
+
+    with patch.object(zielzeit, "zeitzone_am_ziel", _merker):
+        await anlegen(hass, [PAPA], "Gardasee", transportmittel="auto")
+
+    assert threads, "Die Zeitzone wurde gar nicht bestimmt"
+    assert loop_thread not in threads
+
+
+async def test_zustandsabfrage_laedt_keine_zeitzonendatei(hass, eingerichtet, freezer):
+    """Steht die Zone fest, kommt der Sensor ganz ohne Dateizugriff aus.
+
+    Deshalb darf auch kurz vor der Abreise - wenn die Ankunftszeit wirklich
+    gerechnet wird - kein Nachschlagen mehr nötig sein.
+    """
+    await anlegen(hass, [PAPA], "Gardasee", tage=2, transportmittel="auto")
+
+    def _niemals():
+        raise AssertionError("Die Zeitzonendatei wurde erneut geladen")
+
+    with patch.object(zielzeit, "_finder_laden", _niemals):
+        freezer.tick(timedelta(days=1))
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+        assert zustand.attributes["ankunftszeit_text"].endswith("Uhr Ortszeit")
+        assert zustand.attributes["zielzeitzone"] == "Europe/Rome"
+
+
+async def test_zeitzone_wird_fuer_alte_urlaube_nachgetragen(
+    hass, eingerichtet, hass_storage
+):
+    """Urlaube aus 1.0.5 kennen das Feld noch nicht (Bestandsschutz).
+
+    Beim Laden trägt der Manager die Zone nach - im Executor, nicht im
+    Event-Loop.
+    """
+    await anlegen(hass, [PAPA], "Gardasee", transportmittel="auto")
+
+    gespeichert = hass_storage[f"{DOMAIN}.{eingerichtet.entry_id}"]["data"]
+    for eintrag in gespeichert["vacations"]:
+        del eintrag["zielzeitzone"]
+
+    await hass.config_entries.async_reload(eingerichtet.entry_id)
+    await hass.async_block_till_done()
+
+    zustand = hass.states.get("sensor.urlaubszahler_urlaub_papa_gardasee")
+    assert zustand.attributes["zielzeitzone"] == "Europe/Rome"
 
 
 async def test_countdown_stoppt_bei_null(hass, eingerichtet):
