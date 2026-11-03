@@ -25,7 +25,20 @@ Beispieldaten – siehe [Datenschutz](#8-datenschutz).*
 Mindestversion: **Home Assistant 2024.11**
 
 <details>
-<summary><strong>Was ist neu in 1.0.5?</strong></summary>
+<summary><strong>Was ist neu in 1.0.6?</strong></summary>
+
+* **Fehlerbehebung:** Home Assistant meldete „Detected blocking call to open
+  … by custom integration 'urlaubszaehler'". Die Zeitzonen-Suche für die
+  Ankunftszeit (`timezonefinder`, rund 65 MB Geodaten) lief im falschen
+  Moment und hielt Home Assistant dabei kurz an. Sie passiert jetzt einmalig
+  im Hintergrund beim Anlegen eines Urlaubs; die Anzeige rechnet nur noch.
+  Nebeneffekt: Nach einem Neustart werden die Geodaten nicht mehr erneut
+  eingelesen.
+* Neues Sensor-Attribut `zielzeitzone` (z. B. `Europe/Rome`) – die Zeitzone,
+  auf die sich `ankunftszeit_text` bezieht.
+
+<details>
+<summary>Was war neu in 1.0.5?</summary>
 
 * **Transportmittel** beim Anlegen eines Urlaubs auswählbar (Flugzeug, Auto,
   Bahn, Schiff, optional) – im Blueprint und im Karten-Dialog.
@@ -58,6 +71,7 @@ Mindestversion: **Home Assistant 2024.11**
   damit sie auch beim Öffnen des Repositorys direkt aus Home Assistant/HACS
   heraus korrekt angezeigt werden.
 
+</details>
 </details>
 </details>
 
