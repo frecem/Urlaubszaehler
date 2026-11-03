@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from typing import Any
 
 from homeassistant.util import dt as dt_util
@@ -70,6 +70,14 @@ class Vacation:
     koordinaten_quelle: str | None = None
     gefunden_als: str | None = None
     transportmittel: str = TRANSPORTMITTEL_STANDARD
+    # IANA-Name der Zeitzone am Ziel, z. B. "Europe/Rome". Wird einmalig im
+    # Executor bestimmt (siehe zielzeit.py) und mitgespeichert, damit der
+    # Sensor beim Anzeigen keine Zeitzonendatei mehr laden muss.
+    zielzeitzone: str | None = None
+    # Dieselbe Zeitzone als fertiges Objekt. Nur zur Laufzeit, nicht im
+    # Speicher: ZoneInfo() liest beim Anlegen von der Platte und darf deshalb
+    # nicht aus from_dict() heraus entstehen.
+    zielzone: tzinfo | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         self.start = to_local(self.start)
@@ -152,9 +160,9 @@ class Vacation:
         if stunden is None:
             return None
         ankunft_heimatzeit = self.start + timedelta(hours=stunden)
-        return zielzeit.in_ortszeit(
-            ankunft_heimatzeit, self.breitengrad, self.laengengrad
-        )
+        # Die Zeitzone steht schon fest (vom Manager im Executor bestimmt) -
+        # hier wird nur noch gerechnet, nie nachgeschlagen.
+        return zielzeit.in_ortszeit(ankunft_heimatzeit, self.zielzone)
 
     def ankunftszeit_text(
         self, heimat_lat: float, heimat_lon: float, jetzt: datetime | None = None
@@ -204,6 +212,7 @@ class Vacation:
             "koordinaten_quelle": self.koordinaten_quelle,
             "gefunden_als": self.gefunden_als,
             "transportmittel": self.transportmittel,
+            "zielzeitzone": self.zielzeitzone,
         }
 
     @classmethod
@@ -226,4 +235,8 @@ class Vacation:
             # get() statt [] : ältere, vor 1.0.5 gespeicherte Urlaube kennen
             # dieses Feld noch nicht und bekommen den Standardwert.
             transportmittel=daten.get("transportmittel", TRANSPORTMITTEL_STANDARD),
+            # Fehlt der Name (älterer Speicherstand), trägt ihn der Manager
+            # nach dem Laden im Executor nach - hier darf nichts von der
+            # Platte gelesen werden.
+            zielzeitzone=daten.get("zielzeitzone"),
         )

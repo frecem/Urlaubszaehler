@@ -141,6 +141,8 @@ class UrlaubSensor(SensorEntity):
             "ankunftszeit_text": self._urlaub.ankunftszeit_text(
                 heimat_lat, heimat_lon, jetzt
             ),
+            # IANA-Zeitzone am Ziel, in der die Ankunftszeit angegeben wird.
+            "zielzeitzone": self._urlaub.zielzeitzone,
             # Für die Weltkarte der Lovelace-Karte:
             "breitengrad": self._urlaub.breitengrad,
             "laengengrad": self._urlaub.laengengrad,

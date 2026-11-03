@@ -27,6 +27,7 @@ from .const import (
     STORE_BLUEPRINT_PRUEFSUMME,
     TRANSPORTMITTEL_STANDARD,
 )
+from . import zielzeit
 from .geocoding import async_geocode
 from .models import Vacation
 
@@ -126,6 +127,16 @@ class UrlaubszaehlerManager:
                 continue
             self.vacations[urlaub.urlaub_id] = urlaub
 
+        # Aus dem Speicher kommt nur der Name der Zielzeitzone; das fertige
+        # Zeitzonen-Objekt entsteht hier - im Executor, nicht im Event-Loop.
+        # Urlaube aus 1.0.5 kennen den Namen noch nicht und bekommen ihn jetzt.
+        nachgetragen = False
+        for urlaub in self.vacations.values():
+            if await self._async_zielzone_setzen(urlaub):
+                nachgetragen = True
+        if nachgetragen:
+            await self.async_save()
+
     async def async_save(self) -> None:
         """Urlaube speichern."""
         await self._store.async_save(
@@ -180,6 +191,37 @@ class UrlaubszaehlerManager:
         self.geocache[schluessel] = treffer
         return {**treffer, "koordinaten_quelle": "geocoding"}
 
+    async def _async_zielzone_setzen(self, urlaub: Vacation) -> bool:
+        """Zeitzone am Reiseziel bestimmen und am Urlaub hinterlegen.
+
+        Das geschieht bewusst hier und nicht erst beim Anzeigen im Sensor:
+        ``timezonefinder`` liest beim ersten Nachschlagen rund 65 MB von der
+        Platte, ``ZoneInfo`` die Zonendatei des Systems. Im Event-Loop von
+        Home Assistant würde beides den ganzen Server anhalten ("Detected
+        blocking call ... inside the event loop"), deshalb läuft es hier im
+        Executor - einmal pro Ziel statt bei jeder Zustandsabfrage.
+
+        Rückgabe: True, wenn ein neuer Zonenname ermittelt wurde und der
+        Speicher damit veraltet ist.
+        """
+        if not urlaub.hat_koordinaten:
+            geaendert = urlaub.zielzeitzone is not None
+            urlaub.zielzeitzone = None
+            urlaub.zielzone = None
+            return geaendert
+
+        geaendert = False
+        if urlaub.zielzeitzone is None:
+            urlaub.zielzeitzone = await zielzeit.async_zeitzone_am_ziel(
+                self.hass, urlaub.breitengrad, urlaub.laengengrad
+            )
+            geaendert = urlaub.zielzeitzone is not None
+        if urlaub.zielzone is None:
+            urlaub.zielzone = await zielzeit.async_zone(
+                self.hass, urlaub.zielzeitzone
+            )
+        return geaendert
+
     async def async_add_vacation(
         self,
         namen: list[str],
@@ -204,6 +246,22 @@ class UrlaubszaehlerManager:
             transportmittel=transportmittel,
             **ort,
         )
+
+        # Die Automatisierung legt denselben Urlaub bei jedem Lauf neu an.
+        # Bleibt das Ziel gleich, wird die bereits bekannte Zeitzone
+        # übernommen - sonst läse timezonefinder nach jedem Neustart erneut
+        # seine 65 MB ein.
+        bekannt = self.vacations.get(urlaub.urlaub_id)
+        if (
+            bekannt is not None
+            and bekannt.zielzeitzone is not None
+            and bekannt.breitengrad == urlaub.breitengrad
+            and bekannt.laengengrad == urlaub.laengengrad
+        ):
+            urlaub.zielzeitzone = bekannt.zielzeitzone
+            urlaub.zielzone = bekannt.zielzone
+        await self._async_zielzone_setzen(urlaub)
+
         self.vacations[urlaub.urlaub_id] = urlaub
         await self.async_save()
 
@@ -258,6 +316,10 @@ class UrlaubszaehlerManager:
             urlaub.laengengrad = ort["laengengrad"]
             urlaub.koordinaten_quelle = ort["koordinaten_quelle"]
             urlaub.gefunden_als = ort["gefunden_als"]
+            # Neues Ziel bekannt - damit auch die Zeitzone dort.
+            urlaub.zielzeitzone = None
+            urlaub.zielzone = None
+            await self._async_zielzone_setzen(urlaub)
             nachgetragen += 1
             _LOGGER.info(
                 "Koordinaten für '%s' nachträglich gefunden: %s",
